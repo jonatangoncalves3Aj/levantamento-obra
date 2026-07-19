@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#141416" />
+  <meta name="description" content="Levantamento de quantitativos de obra a partir de plantas em PDF — escala, medição e tabela de quantitativos" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Levantamento" />
+  <title>Levantamento de Obra</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="css/levantamento.css" />
+</head>
+<body>
+  <!-- Topbar -->
+  <header class="topbar">
+    <h1 class="titulo">Levantamento <span>de Obra</span></h1>
+
+    <div class="proj-ctrl">
+      <select id="sel-projeto" title="Projeto"></select>
+      <button id="btn-proj-novo" title="Novo projeto">+</button>
+      <button id="btn-proj-renomear" title="Renomear projeto">&#9998;</button>
+      <button id="btn-proj-excluir" title="Excluir projeto">&#128465;</button>
+      <button id="btn-proj-exportar" title="Exportar projeto (.json)">&#11015;</button>
+      <button id="btn-proj-importar" title="Importar projeto (.json)">&#11014;</button>
+    </div>
+
+    <div class="seg-toggle" role="tablist">
+      <button id="btn-view-planta" class="seg ativo" role="tab">Planta</button>
+      <button id="btn-view-tabela" class="seg" role="tab">Tabela</button>
+      <button id="btn-view-orcamento" class="seg" role="tab">Or&ccedil;amento</button>
+      <button id="btn-view-avanco" class="seg" role="tab">Avan&ccedil;o</button>
+    </div>
+
+    <div class="zoom-ctrl" id="zoom-ctrl">
+      <button id="btn-zoom-out" title="Reduzir">&minus;</button>
+      <span id="zoom-label">100&nbsp;%</span>
+      <button id="btn-zoom-in" title="Ampliar">+</button>
+      <button id="btn-ajustar" class="btn-ghost">Ajustar</button>
+      <button id="btn-nomes" class="btn-ghost ativo">Nomes</button>
+    </div>
+
+    <div class="topbar-fim">
+      <a class="link-voltar" href="https://jonatangoncalves3aj.github.io/dimensionamento-saneamento/" title="Dimensionamento de Saneamento">Saneamento &nearr;</a>
+      <button id="btn-pranchas" class="btn-laranja">+ Pranchas</button>
+    </div>
+  </header>
+
+  <!-- Abas de pranchas -->
+  <nav class="abas" id="abas"></nav>
+
+  <!-- Vista Planta -->
+  <main class="principal" id="vista-planta">
+    <div class="viewport" id="viewport">
+      <div class="palco" id="palco">
+        <canvas id="canvas-pdf"></canvas>
+        <svg id="overlay" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="vazio" id="vazio">
+        <div class="vazio-icone">&#128196;</div>
+        <p>Abra o PDF do projeto para come&ccedil;ar o levantamento.</p>
+        <button class="btn-laranja" id="btn-pranchas-vazio">+ Pranchas</button>
+      </div>
+    </div>
+
+    <!-- Sidebar de passos -->
+    <aside class="sidebar" id="sidebar">
+      <section class="passo">
+        <h2>0 &middot; Autom&aacute;tico <small>(beta)</small></h2>
+        <label class="campo-label" for="sel-disciplina">Disciplina desta prancha</label>
+        <select id="sel-disciplina">
+          <option>Arquitetura</option>
+          <option>Estrutura</option>
+          <option>Funda&ccedil;&atilde;o</option>
+          <option>Hidr&aacute;ulica</option>
+          <option>El&eacute;trica</option>
+          <option>Climatiza&ccedil;&atilde;o</option>
+        </select>
+        <button id="btn-analisar" class="btn-passo">&#128269;&nbsp; Analisar planta</button>
+        <p class="dica">Selecione a disciplina e clique em analisar. Arquitetura l&ecirc; ambientes (nome, &aacute;rea e p&eacute;-direito).</p>
+        <p class="resultado" id="resultado-analise" hidden></p>
+      </section>
+
+      <section class="passo">
+        <h2>1 &middot; Escala <small>(calibrar)</small></h2>
+        <button id="btn-calibrar" class="btn-passo" data-tool="calibrar">&#128207;&nbsp; Calibrar escala</button>
+        <button id="btn-carimbo" class="btn-passo">&#127991;&#65039;&nbsp; Pela escala do carimbo</button>
+        <p class="dica" id="status-escala">Escala <strong class="alerta">n&atilde;o definida</strong> — calibre sobre uma cota conhecida.</p>
+      </section>
+
+      <section class="passo">
+        <h2>2 &middot; Medir</h2>
+        <p class="dica">Selecione um ambiente (clique no card ou no pin) e me&ccedil;a o per&iacute;metro dele.</p>
+        <div class="grade-ferramentas">
+          <button class="btn-tool" data-tool="lado">&#9634;<span>Lado (ret&acirc;ng.)</span></button>
+          <button class="btn-tool" data-tool="perimetro">&#11040;<span>Per&iacute;metro</span></button>
+          <button class="btn-tool" data-tool="linear">&#9585;<span>Linear</span></button>
+          <button class="btn-tool" data-tool="contagem">&#9678;<span>Contagem</span></button>
+        </div>
+        <button id="btn-add-ambiente" class="btn-passo" data-tool="ambiente">+ Ambiente manual</button>
+      </section>
+
+      <section class="passo" id="secao-ambientes" hidden>
+        <h2>Ambientes <small id="qtd-ambientes"></small></h2>
+        <div id="lista-ambientes"></div>
+      </section>
+
+      <section class="passo" id="secao-medicoes" hidden>
+        <h2>Medi&ccedil;&otilde;es avulsas</h2>
+        <div id="lista-medicoes"></div>
+      </section>
+
+      <section class="passo">
+        <p class="dica">Atalhos: <strong>1&ndash;4</strong> ferramentas &middot; <strong>C</strong> calibrar &middot; <strong>A</strong> ambiente &middot; <strong>T</strong> planta/tabela &middot; <strong>N</strong> nomes &middot; <strong>+/&minus;</strong> zoom &middot; <strong>0</strong> ajustar &middot; <strong>Ctrl+Z</strong> desfazer &middot; <strong>Esc</strong> cancelar &middot; arraste para navegar.</p>
+      </section>
+    </aside>
+  </main>
+
+  <!-- Vista Tabela -->
+  <main class="principal-tabela" id="vista-tabela" hidden>
+    <div class="tabela-acoes">
+      <button id="btn-csv" class="btn-ghost">Exportar CSV</button>
+      <button id="btn-imprimir" class="btn-ghost">Imprimir</button>
+      <p class="dica dica-tabela">Porta/correr desconta sempre &middot; janela s&oacute; desconta se &gt; 2,00 m&sup2;. Campos claros s&atilde;o edit&aacute;veis.</p>
+    </div>
+    <div class="tabela-scroll" id="tabela-scroll"></div>
+  </main>
+
+  <!-- Vista Orçamento -->
+  <main class="principal-tabela" id="vista-orcamento" hidden>
+    <div class="tabela-acoes">
+      <button id="btn-orc-add" class="btn-ghost">+ Servi&ccedil;o</button>
+      <label class="campo-inline">BDI (%) <input id="inp-bdi" inputmode="decimal" /></label>
+      <button id="btn-orc-csv" class="btn-ghost">Exportar CSV</button>
+      <button id="btn-orc-imprimir" class="btn-ghost">Imprimir</button>
+      <p class="dica dica-tabela">Quantidades v&ecirc;m do levantamento (fonte de cada servi&ccedil;o). Pre&ccedil;os s&atilde;o de refer&ecirc;ncia — edite com os seus.</p>
+    </div>
+    <div class="tabela-scroll" id="orc-scroll"></div>
+  </main>
+
+  <!-- Vista Avanço -->
+  <main class="principal-tabela" id="vista-avanco" hidden>
+    <div class="tabela-acoes">
+      <label class="campo-inline">In&iacute;cio <input type="date" id="inp-data-inicio" /></label>
+      <label class="campo-inline">T&eacute;rmino <input type="date" id="inp-data-fim" /></label>
+      <span class="avanco-global" id="avanco-global"></span>
+      <p class="dica dica-tabela">Marque o % de cada ambiente (na planta ou aqui). O avan&ccedil;o global &eacute; ponderado pela &aacute;rea.</p>
+    </div>
+    <div class="tabela-scroll" id="avanco-scroll"></div>
+  </main>
+
+  <!-- Diálogo: classificar pranchas importadas -->
+  <dialog id="dlg-importar">
+    <h3>Pranchas</h3>
+    <p class="dica">Confirme o pavimento e a disciplina de cada prancha.</p>
+    <div id="dlg-importar-lista"></div>
+    <div class="dlg-botoes">
+      <button id="dlg-importar-cancelar" class="btn-ghost">Cancelar</button>
+      <button id="dlg-importar-ok" class="btn-laranja">Confirmar</button>
+    </div>
+  </dialog>
+
+  <!-- Diálogo: calibrar escala -->
+  <dialog id="dlg-calibrar">
+    <h3>Calibrar escala</h3>
+    <p class="dica">Qual o comprimento <strong>real</strong> da linha que voc&ecirc; acabou de marcar?</p>
+    <div class="linha-campo">
+      <input id="inp-calibrar" type="number" step="0.01" min="0.01" placeholder="ex.: 12,00" />
+      <span>m</span>
+    </div>
+    <div class="dlg-botoes">
+      <button id="dlg-calibrar-cancelar" class="btn-ghost">Cancelar</button>
+      <button id="dlg-calibrar-ok" class="btn-laranja">Confirmar</button>
+    </div>
+  </dialog>
+
+  <!-- Diálogo: escala do carimbo -->
+  <dialog id="dlg-carimbo">
+    <h3>Escala do carimbo</h3>
+    <p class="dica" id="dlg-carimbo-msg"></p>
+    <div class="linha-campo">
+      <span>1&nbsp;:</span>
+      <input id="inp-carimbo" type="number" step="1" min="1" placeholder="ex.: 50" />
+    </div>
+    <div class="dlg-botoes">
+      <button id="dlg-carimbo-cancelar" class="btn-ghost">Cancelar</button>
+      <button id="dlg-carimbo-ok" class="btn-laranja">Confirmar</button>
+    </div>
+  </dialog>
+
+  <input type="file" id="inp-arquivos" accept="application/pdf" multiple hidden />
+  <input type="file" id="inp-json" accept="application/json,.json" hidden />
+
+  <script type="module" src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+    }
+  </script>
+</body>
+</html>
