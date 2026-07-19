@@ -146,6 +146,39 @@ function renderAbas() {
 $('btn-pranchas').addEventListener('click', () => $('inp-arquivos').click());
 $('btn-pranchas-vazio').addEventListener('click', () => $('inp-arquivos').click());
 
+// Select de pavimento alimentado pela lista do projeto, com "+ Novo pavimento…"
+function selPavimento(valorAtual, aoMudar) {
+  const sel = document.createElement('select');
+  const preencher = () => {
+    sel.innerHTML = '';
+    for (const p of state.projeto.pavimentos) {
+      sel.appendChild(new Option(p, p, false, p === valorAtual));
+    }
+    sel.appendChild(new Option('+ Novo pavimento…', '__novo__'));
+  };
+  preencher();
+  sel.addEventListener('change', () => {
+    if (sel.value === '__novo__') {
+      const nome = prompt('Nome do novo pavimento (ex.: 2º Pavimento, Mezanino, Ático):');
+      if (!nome || !nome.trim()) { sel.value = valorAtual; return; }
+      const limpo = nome.trim();
+      if (!state.projeto.pavimentos.includes(limpo)) state.projeto.pavimentos.push(limpo);
+      salvar();
+      valorAtual = limpo;
+      preencher();
+      document.querySelectorAll('select[data-pavimentos]').forEach(s => {
+        if (s !== sel) s.dispatchEvent(new CustomEvent('pavimentos-mudaram'));
+      });
+    } else {
+      valorAtual = sel.value;
+    }
+    aoMudar(valorAtual);
+  });
+  sel.dataset.pavimentos = '1';
+  sel.addEventListener('pavimentos-mudaram', preencher);
+  return sel;
+}
+
 function chutarPavimento(nomeArq) {
   const n = nomeArq.toUpperCase();
   if (/SUB|INF|-SS/.test(n)) return 'Subsolo';
@@ -185,10 +218,8 @@ $('inp-arquivos').addEventListener('change', async (e) => {
     const linha = document.createElement('div');
     linha.className = 'dlg-prancha';
     linha.innerHTML = `<span class="nome-arq" title="${pd.rotulo}">${pd.rotulo}</span>`;
-    const inpPav = document.createElement('input');
-    inpPav.value = pd.pavimento;
-    inpPav.setAttribute('list', 'lista-pavimentos');
-    inpPav.addEventListener('input', () => { pd.pavimento = inpPav.value; });
+    if (!state.projeto.pavimentos.includes(pd.pavimento)) pd.pavimento = state.projeto.pavimentos[0] || 'Térreo';
+    const inpPav = selPavimento(pd.pavimento, v => { pd.pavimento = v; });
     const selDisc = document.createElement('select');
     for (const d of ['Arquitetura', 'Estrutura', 'Fundação', 'Hidráulica', 'Elétrica', 'Climatização']) {
       selDisc.appendChild(new Option(d, d));
@@ -198,12 +229,6 @@ $('inp-arquivos').addEventListener('change', async (e) => {
     linha.appendChild(selDisc);
     lista.appendChild(linha);
   });
-  if (!$('lista-pavimentos')) {
-    const dl = document.createElement('datalist');
-    dl.id = 'lista-pavimentos';
-    for (const p of ['Subsolo', 'Térreo', 'Superior', 'Cobertura']) dl.appendChild(new Option(p));
-    document.body.appendChild(dl);
-  }
 
   const dlg = $('dlg-importar');
   dlg.showModal();
@@ -534,6 +559,16 @@ function renderSidebar() {
   const p = pranchaAtual();
   statusEscala();
   if (p) $('sel-disciplina').value = p.disciplina;
+
+  const contPav = $('pavimento-prancha');
+  contPav.innerHTML = '';
+  if (p) {
+    contPav.appendChild(selPavimento(p.pavimento, v => {
+      p.pavimento = v;
+      salvar(); renderAbas();
+    }));
+  }
+  contPav.closest('.passo').hidden = !p;
 
   const secA = $('secao-ambientes');
   const lista = $('lista-ambientes');

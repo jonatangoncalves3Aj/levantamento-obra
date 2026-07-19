@@ -32,9 +32,12 @@ export function catalogoPadrao() {
   ];
 }
 
+export const PAVIMENTOS_PADRAO = ['Subsolo', 'Térreo', 'Superior', 'Cobertura'];
+
 export function novoProjeto(nome = 'Levantamento') {
   return {
     id: uid(), nome, criadoEm: new Date().toISOString(), pranchas: [],
+    pavimentos: [...PAVIMENTOS_PADRAO],
     catalogo: catalogoPadrao(), bdi: 25,
     dataInicio: null, dataFim: null, snapshots: [],
   };
@@ -47,10 +50,21 @@ export function garantirCampos(proj) {
   proj.dataInicio ??= null;
   proj.dataFim ??= null;
   proj.snapshots ??= [];
+  proj.pavimentos ??= [...PAVIMENTOS_PADRAO];
   for (const p of proj.pranchas) {
+    if (p.pavimento && !proj.pavimentos.includes(p.pavimento)) proj.pavimentos.push(p.pavimento);
     for (const a of p.ambientes) a.avanco ??= 0;
   }
   return proj;
+}
+
+// Ordena nomes de pavimento pela ordem definida no projeto (desconhecidos ao fim)
+export function ordenarPavimentos(proj, nomes) {
+  const idx = (n) => {
+    const i = proj.pavimentos.indexOf(n);
+    return i === -1 ? proj.pavimentos.length : i;
+  };
+  return [...nomes].sort((a, b) => idx(a) - idx(b));
 }
 
 export function novaPrancha(arquivoNome, pagina, pavimento, disciplina) {

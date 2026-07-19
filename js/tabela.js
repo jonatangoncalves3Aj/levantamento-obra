@@ -1,6 +1,6 @@
 // Vista Tabela — quantitativos por pavimento, subtotais, CSV e impressão
 
-import { state, salvar } from './store.js';
+import { state, salvar, ordenarPavimentos } from './store.js';
 import { calcAmbiente, fmt, num } from './calc.js';
 import { comprimentoPolilinha } from './calc.js';
 
@@ -17,7 +17,11 @@ function grupos() {
     if (!porPav.has(p.pavimento)) porPav.set(p.pavimento, []);
     porPav.get(p.pavimento).push(p);
   }
-  return porPav;
+  const ordenado = new Map();
+  for (const nome of ordenarPavimentos(state.projeto, [...porPav.keys()])) {
+    ordenado.set(nome, porPav.get(nome));
+  }
+  return ordenado;
 }
 
 const valorBR = (v) => (typeof v === 'number' ? String(v).replace('.', ',') : v ?? '');
