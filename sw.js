@@ -1,5 +1,5 @@
 // Service Worker — Levantamento de Obra
-const CACHE = 'levantamento-v1';
+const CACHE = 'levantamento-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -13,8 +13,14 @@ const ASSETS = [
   './js/tabela.js',
   './js/orcamento.js',
   './js/avanco.js',
+  './js/exportar-xlsx.js',
+  './js/relatorio.js',
+  './js/nuvem.js',
   './vendor/pdf.min.mjs',
   './vendor/pdf.worker.min.mjs',
+  './vendor/xlsx.full.min.js',
+  './vendor/jspdf.umd.min.js',
+  './vendor/jspdf.plugin.autotable.min.js',
   './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -36,6 +42,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  // Não intercepta chamadas externas (ex.: API do banco de dados na nuvem)
+  if (!e.request.url.startsWith(self.location.origin)) return;
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );

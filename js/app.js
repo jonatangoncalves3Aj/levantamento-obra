@@ -9,6 +9,9 @@ import {
 } from './store.js';
 import { renderOrcamento, adicionarServico, exportarOrcamentoCSV } from './orcamento.js';
 import { renderAvanco, registrarSnapshot } from './avanco.js';
+import { exportarXLSX } from './exportar-xlsx.js';
+import { gerarRelatorioPDF } from './relatorio.js';
+import * as nuvem from './nuvem.js';
 import {
   renderizar, ajustar, pontoDoEvento, desenharOverlay,
   obterPagina, esquecerPagina, contarPaginas,
@@ -774,7 +777,87 @@ $('btn-nomes').addEventListener('click', () => {
 /* =============== Tabela: exportações =============== */
 
 $('btn-csv').addEventListener('click', exportarCSV);
+$('btn-xlsx').addEventListener('click', exportarXLSX);
+$('btn-orc-xlsx').addEventListener('click', exportarXLSX);
 $('btn-imprimir').addEventListener('click', () => window.print());
+
+async function relatorio(botao) {
+  botao.disabled = true;
+  botao.textContent = 'Gerando…';
+  try { await gerarRelatorioPDF(); }
+  catch (e) { alert('Falha ao gerar relatório: ' + e.message); }
+  botao.disabled = false;
+  botao.textContent = 'Relatório PDF';
+}
+$('btn-relatorio').addEventListener('click', () => relatorio($('btn-relatorio')));
+$('btn-orc-relatorio').addEventListener('click', () => relatorio($('btn-orc-relatorio')));
+
+/* =============== Nuvem (banco de dados) =============== */
+
+function nuvemStatus(msg, ok = true) {
+  const el = $('nuvem-status');
+  el.hidden = false;
+  el.innerHTML = ok ? msg : `<span class="alerta">${msg}</span>`;
+}
+
+$('btn-nuvem').addEventListener('click', () => {
+  const c = nuvem.lerConfig();
+  $('inp-nuvem-url').value = c?.url || '';
+  $('inp-nuvem-key').value = c?.anonKey || '';
+  $('nuvem-status').hidden = true;
+  $('nuvem-lista').innerHTML = '';
+  $('dlg-nuvem').showModal();
+});
+$('dlg-nuvem-fechar').addEventListener('click', () => $('dlg-nuvem').close());
+
+function salvarConfigNuvem() {
+  const url = $('inp-nuvem-url').value.trim();
+  const key = $('inp-nuvem-key').value.trim();
+  if (!url || !key) { nuvemStatus('Preencha a URL e a chave anon (veja o guia de configuração).', false); return false; }
+  nuvem.salvarConfig(url, key);
+  return true;
+}
+
+$('btn-nuvem-enviar').addEventListener('click', async () => {
+  if (!salvarConfigNuvem()) return;
+  nuvemStatus('Enviando projeto (com as plantas)…');
+  try {
+    await nuvem.enviarProjeto();
+    nuvemStatus(`&check; Projeto "<strong>${state.projeto.nome}</strong>" salvo na nuvem.`);
+  } catch (e) { nuvemStatus('Falha ao enviar: ' + e.message, false); }
+});
+
+$('btn-nuvem-baixar').addEventListener('click', async () => {
+  if (!salvarConfigNuvem()) return;
+  nuvemStatus('Buscando projetos na nuvem…');
+  const lista = $('nuvem-lista');
+  lista.innerHTML = '';
+  try {
+    const projetos = await nuvem.listarNuvem();
+    if (!projetos.length) { nuvemStatus('Nenhum projeto na nuvem ainda — envie um primeiro.'); return; }
+    nuvemStatus(`${projetos.length} projeto(s) na nuvem — clique para baixar:`);
+    for (const p of projetos) {
+      const linha = document.createElement('div');
+      linha.className = 'medicao-linha';
+      const quando = new Date(p.atualizado_em).toLocaleString('pt-BR');
+      linha.innerHTML = `<span>${p.nome}</span><small style="color:var(--texto-2)">${quando}</small>`;
+      const btn = document.createElement('button');
+      btn.className = 'btn-mini';
+      btn.style.marginTop = '0';
+      btn.textContent = 'Baixar';
+      btn.addEventListener('click', async () => {
+        btn.textContent = '…';
+        try {
+          const proj = await nuvem.baixarProjeto(p.id);
+          $('dlg-nuvem').close();
+          trocarProjeto(proj);
+        } catch (e) { nuvemStatus('Falha ao baixar: ' + e.message, false); btn.textContent = 'Baixar'; }
+      });
+      linha.appendChild(btn);
+      lista.appendChild(linha);
+    }
+  } catch (e) { nuvemStatus('Falha ao listar: ' + e.message, false); }
+});
 
 /* =============== Orçamento e Avanço: controles =============== */
 

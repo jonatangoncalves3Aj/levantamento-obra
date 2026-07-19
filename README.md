@@ -14,6 +14,8 @@ App web para **levantamento de quantitativos de obra a partir de plantas em PDF*
 - **Orçamento**: catálogo de serviços com quantidades derivadas do levantamento, curva ABC, BDI e totais
 - **Avanço físico**: % executado por ambiente marcado na planta, avanço ponderado por área e curva S (real × planejado)
 - **Multi-projeto** com exportação/importação em JSON (plantas incluídas) para backup e compartilhamento
+- **Exportação XLSX** (abas Quantitativos, Orçamento com fórmulas e BDI, Avanço) e **relatório PDF** com capa, resumo executivo, tabelas e curva S
+- **Nuvem (opcional)**: salve os projetos num banco Supabase e acesse de qualquer aparelho — veja [`docs/SINCRONIZACAO.md`](docs/SINCRONIZACAO.md)
 - Desfazer/refazer, atalhos de teclado, instalável no celular (PWA)
 
 ## Desenvolvimento

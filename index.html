@@ -28,6 +28,7 @@
       <button id="btn-proj-excluir" title="Excluir projeto">&#128465;</button>
       <button id="btn-proj-exportar" title="Exportar projeto (.json)">&#11015;</button>
       <button id="btn-proj-importar" title="Importar projeto (.json)">&#11014;</button>
+      <button id="btn-nuvem" title="Nuvem — salvar/baixar do banco de dados">&#9729;</button>
     </div>
 
     <div class="seg-toggle" role="tablist">
@@ -131,6 +132,8 @@
   <main class="principal-tabela" id="vista-tabela" hidden>
     <div class="tabela-acoes">
       <button id="btn-csv" class="btn-ghost">Exportar CSV</button>
+      <button id="btn-xlsx" class="btn-ghost">Exportar XLSX</button>
+      <button id="btn-relatorio" class="btn-ghost">Relat&oacute;rio PDF</button>
       <button id="btn-imprimir" class="btn-ghost">Imprimir</button>
       <p class="dica dica-tabela">Porta/correr desconta sempre &middot; janela s&oacute; desconta se &gt; 2,00 m&sup2;. Campos claros s&atilde;o edit&aacute;veis.</p>
     </div>
@@ -143,6 +146,8 @@
       <button id="btn-orc-add" class="btn-ghost">+ Servi&ccedil;o</button>
       <label class="campo-inline">BDI (%) <input id="inp-bdi" inputmode="decimal" /></label>
       <button id="btn-orc-csv" class="btn-ghost">Exportar CSV</button>
+      <button id="btn-orc-xlsx" class="btn-ghost">Exportar XLSX</button>
+      <button id="btn-orc-relatorio" class="btn-ghost">Relat&oacute;rio PDF</button>
       <button id="btn-orc-imprimir" class="btn-ghost">Imprimir</button>
       <p class="dica dica-tabela">Quantidades v&ecirc;m do levantamento (fonte de cada servi&ccedil;o). Pre&ccedil;os s&atilde;o de refer&ecirc;ncia — edite com os seus.</p>
     </div>
@@ -199,9 +204,29 @@
     </div>
   </dialog>
 
+  <!-- Diálogo: nuvem (banco de dados) -->
+  <dialog id="dlg-nuvem">
+    <h3>&#9729; Nuvem — banco de dados</h3>
+    <p class="dica">Salve seus projetos num banco Supabase e acesse de qualquer aparelho. <a href="docs/SINCRONIZACAO.md" target="_blank" style="color:var(--laranja-2)">Como configurar (5 min)</a></p>
+    <label class="campo-label" style="margin-top:10px">URL do projeto Supabase</label>
+    <input id="inp-nuvem-url" placeholder="https://xxxx.supabase.co" />
+    <label class="campo-label" style="margin-top:8px">Chave anon (public)</label>
+    <input id="inp-nuvem-key" placeholder="eyJ..." />
+    <p class="resultado" id="nuvem-status" hidden></p>
+    <div id="nuvem-lista"></div>
+    <div class="dlg-botoes">
+      <button id="dlg-nuvem-fechar" class="btn-ghost">Fechar</button>
+      <button id="btn-nuvem-baixar" class="btn-ghost">Baixar da nuvem</button>
+      <button id="btn-nuvem-enviar" class="btn-laranja">Enviar projeto atual</button>
+    </div>
+  </dialog>
+
   <input type="file" id="inp-arquivos" accept="application/pdf" multiple hidden />
   <input type="file" id="inp-json" accept="application/json,.json" hidden />
 
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script src="vendor/jspdf.umd.min.js"></script>
+  <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script type="module" src="js/app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
