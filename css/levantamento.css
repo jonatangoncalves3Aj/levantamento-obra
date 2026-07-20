@@ -248,6 +248,17 @@ h3.tabela-sub { font-size: .8rem; color: var(--texto-2); margin: 22px 0 6px; tex
 .legenda { display: flex; gap: 18px; font-size: .78rem; color: var(--texto-2); margin: 8px 2px; }
 .legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 
+/* ---------- Pendências e RDO ---------- */
+.card.pendencia-ok { opacity: .65; }
+.rdo-card { max-width: 640px; margin-bottom: 14px; }
+.rdo-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0; }
+.rdo-card textarea {
+  width: 100%; background: var(--fundo); color: var(--texto);
+  border: 1px solid var(--borda); border-radius: 6px; padding: 7px 9px;
+  font-size: .84rem; font-family: inherit; resize: vertical;
+}
+#vista-rdo .tabela-scroll { padding-top: 10px; }
+
 /* ---------- Diálogos ---------- */
 dialog {
   background: var(--fundo-2); color: var(--texto); border: 1px solid var(--borda);

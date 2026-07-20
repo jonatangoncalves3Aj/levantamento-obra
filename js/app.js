@@ -9,6 +9,7 @@ import {
 } from './store.js';
 import { renderOrcamento, adicionarServico, exportarOrcamentoCSV } from './orcamento.js';
 import { renderAvanco, registrarSnapshot } from './avanco.js';
+import { renderRDO, novoRDO } from './rdo.js';
 import { exportarXLSX } from './exportar-xlsx.js';
 import { gerarRelatorioPDF } from './relatorio.js';
 import * as nuvem from './nuvem.js';
@@ -41,6 +42,7 @@ function atualizarTudo() {
   if (state.view === 'tabela') renderTabela();
   if (state.view === 'orcamento') renderOrcamento();
   if (state.view === 'avanco') renderAvanco();
+  if (state.view === 'rdo') renderRDO();
 }
 
 /* =============== Projetos (multi-projeto + JSON) =============== */
@@ -466,6 +468,11 @@ overlay.addEventListener('click', (e) => {
     return;
   }
 
+  if (state.tool === 'pendencia') {
+    abrirPendencia(pt);
+    return;
+  }
+
   if (state.tool === 'contagem') {
     if (!state.desenho) {
       const nomeC = prompt('O que você está contando? (ex.: Portas, Luminárias)');
@@ -488,6 +495,28 @@ overlay.addEventListener('click', (e) => {
   if (state.tool === 'calibrar' && state.desenho.pontos.length === 2) abrirCalibrar();
   if (state.tool === 'lado' && state.desenho.pontos.length === 2) medirLado();
 });
+
+function abrirPendencia(pt) {
+  const dlg = $('dlg-pendencia');
+  $('inp-pend-titulo').value = '';
+  $('inp-pend-resp').value = '';
+  $('inp-pend-prazo').value = '';
+  dlg.showModal();
+  $('dlg-pend-ok').onclick = () => {
+    const titulo = $('inp-pend-titulo').value.trim();
+    if (!titulo) return;
+    dlg.close();
+    pranchaAtual().pendencias.push({
+      id: uid(), x: pt.x, y: pt.y, titulo,
+      responsavel: $('inp-pend-resp').value.trim(),
+      prazo: $('inp-pend-prazo').value || null,
+      status: 'aberta',
+    });
+    setTool(null);
+    salvar(); renderSidebar(); desenharOverlay();
+  };
+  $('dlg-pend-cancelar').onclick = () => dlg.close();
+}
 
 function abrirCalibrar() {
   const dlg = $('dlg-calibrar');
@@ -583,6 +612,16 @@ function renderSidebar() {
     for (const a of p.ambientes) lista.appendChild(cardAmbiente(p, a));
   }
 
+  const secP = $('secao-pendencias');
+  const listaP = $('lista-pendencias');
+  listaP.innerHTML = '';
+  secP.hidden = !p || !p.pendencias.length;
+  $('qtd-pendencias').textContent = p?.pendencias.length
+    ? `(${p.pendencias.filter(x => x.status === 'aberta').length} abertas)` : '';
+  if (p) {
+    for (const pd of p.pendencias) listaP.appendChild(cardPendencia(p, pd));
+  }
+
   const secM = $('secao-medicoes');
   const listaM = $('lista-medicoes');
   listaM.innerHTML = '';
@@ -610,6 +649,57 @@ function renderSidebar() {
       listaM.appendChild(linha);
     }
   }
+}
+
+function cardPendencia(p, pd) {
+  const card = document.createElement('div');
+  card.className = 'card' + (pd.status === 'resolvida' ? ' pendencia-ok' : '');
+
+  const topo = document.createElement('div');
+  topo.className = 'card-topo';
+  const cor = document.createElement('span');
+  cor.className = 'pin-cor';
+  cor.style.background = pd.status === 'resolvida' ? '#22c55e' : '#ef4444';
+  const nome = document.createElement('input');
+  nome.className = 'nome';
+  nome.value = pd.titulo;
+  nome.addEventListener('change', () => { pd.titulo = nome.value; salvar(); desenharOverlay(); });
+  const del = document.createElement('button');
+  del.innerHTML = '&times;';
+  del.title = 'Excluir pendência';
+  del.addEventListener('click', () => {
+    p.pendencias = p.pendencias.filter(x => x.id !== pd.id);
+    salvar(); renderSidebar(); desenharOverlay();
+  });
+  topo.appendChild(cor); topo.appendChild(nome); topo.appendChild(del);
+  card.appendChild(topo);
+
+  const grade = document.createElement('div');
+  grade.className = 'card-grade';
+  const mk = (rotulo, el2) => {
+    const w = document.createElement('div');
+    const l = document.createElement('label');
+    l.textContent = rotulo;
+    w.appendChild(l); w.appendChild(el2);
+    return w;
+  };
+  const inpResp = document.createElement('input');
+  inpResp.value = pd.responsavel || '';
+  inpResp.placeholder = 'quem resolve';
+  inpResp.addEventListener('change', () => { pd.responsavel = inpResp.value.trim(); salvar(); });
+  grade.appendChild(mk('Responsável', inpResp));
+  const inpPrazo = document.createElement('input');
+  inpPrazo.type = 'date';
+  inpPrazo.value = pd.prazo || '';
+  inpPrazo.addEventListener('change', () => { pd.prazo = inpPrazo.value || null; salvar(); });
+  grade.appendChild(mk('Prazo', inpPrazo));
+  const selSt = document.createElement('select');
+  selSt.appendChild(new Option('Aberta', 'aberta', false, pd.status === 'aberta'));
+  selSt.appendChild(new Option('Resolvida', 'resolvida', false, pd.status === 'resolvida'));
+  selSt.addEventListener('change', () => { pd.status = selSt.value; salvar(); renderSidebar(); desenharOverlay(); });
+  grade.appendChild(mk('Status', selSt));
+  card.appendChild(grade);
+  return card;
 }
 
 function campoNum(rotulo, valor, aoMudar) {
@@ -736,7 +826,7 @@ function cardAmbiente(p, a) {
 
 /* =============== Topbar: vistas, zoom, nomes =============== */
 
-const VISTAS = ['planta', 'tabela', 'orcamento', 'avanco'];
+const VISTAS = ['planta', 'tabela', 'orcamento', 'avanco', 'rdo'];
 for (const v of VISTAS) {
   $(`btn-view-${v}`).addEventListener('click', () => trocarVista(v));
 }
@@ -751,6 +841,7 @@ function trocarVista(v) {
   if (v === 'tabela') renderTabela();
   else if (v === 'orcamento') renderOrcamento();
   else if (v === 'avanco') renderAvanco();
+  else if (v === 'rdo') renderRDO();
   else renderizar();
 }
 
@@ -972,6 +1063,7 @@ $('btn-nuvem-baixar').addEventListener('click', async () => {
 /* =============== Orçamento e Avanço: controles =============== */
 
 $('btn-orc-add').addEventListener('click', adicionarServico);
+$('btn-rdo-novo').addEventListener('click', novoRDO);
 $('btn-orc-csv').addEventListener('click', exportarOrcamentoCSV);
 $('btn-orc-imprimir').addEventListener('click', () => window.print());
 $('inp-bdi').addEventListener('change', () => {

@@ -36,6 +36,7 @@
       <button id="btn-view-tabela" class="seg" role="tab">Tabela</button>
       <button id="btn-view-orcamento" class="seg" role="tab">Or&ccedil;amento</button>
       <button id="btn-view-avanco" class="seg" role="tab">Avan&ccedil;o</button>
+      <button id="btn-view-rdo" class="seg" role="tab">RDO</button>
     </div>
 
     <div class="zoom-ctrl" id="zoom-ctrl">
@@ -111,11 +112,17 @@
           <button class="btn-tool" data-tool="contagem">&#9678;<span>Contagem</span></button>
         </div>
         <button id="btn-add-ambiente" class="btn-passo" data-tool="ambiente">+ Ambiente manual</button>
+        <button id="btn-add-pendencia" class="btn-passo" data-tool="pendencia">&#9888;&#65039; + Pend&ecirc;ncia</button>
       </section>
 
       <section class="passo" id="secao-ambientes" hidden>
         <h2>Ambientes <small id="qtd-ambientes"></small></h2>
         <div id="lista-ambientes"></div>
+      </section>
+
+      <section class="passo" id="secao-pendencias" hidden>
+        <h2>Pend&ecirc;ncias <small id="qtd-pendencias"></small></h2>
+        <div id="lista-pendencias"></div>
       </section>
 
       <section class="passo" id="secao-medicoes" hidden>
@@ -203,6 +210,30 @@
     <div class="dlg-botoes">
       <button id="dlg-carimbo-cancelar" class="btn-ghost">Cancelar</button>
       <button id="dlg-carimbo-ok" class="btn-laranja">Confirmar</button>
+    </div>
+  </dialog>
+
+  <!-- Vista RDO (diário de obra) -->
+  <main class="principal-tabela" id="vista-rdo" hidden>
+    <div class="tabela-acoes">
+      <button id="btn-rdo-novo" class="btn-laranja">+ RDO de hoje</button>
+      <p class="dica dica-tabela">Di&aacute;rio de obra: clima, efetivo e atividades do dia. Cada RDO pode ser exportado em PDF.</p>
+    </div>
+    <div class="tabela-scroll" id="rdo-scroll"></div>
+  </main>
+
+  <!-- Diálogo: pendência -->
+  <dialog id="dlg-pendencia">
+    <h3>&#9888;&#65039; Pend&ecirc;ncia</h3>
+    <label class="campo-label" style="margin-top:8px">T&iacute;tulo *</label>
+    <input id="inp-pend-titulo" placeholder="ex.: Furo de laje conflita com viga V12" />
+    <label class="campo-label" style="margin-top:8px">Respons&aacute;vel</label>
+    <input id="inp-pend-resp" placeholder="ex.: Projetista estrutural" />
+    <label class="campo-label" style="margin-top:8px">Prazo</label>
+    <input id="inp-pend-prazo" type="date" />
+    <div class="dlg-botoes">
+      <button id="dlg-pend-cancelar" class="btn-ghost">Cancelar</button>
+      <button id="dlg-pend-ok" class="btn-laranja">Criar</button>
     </div>
   </dialog>
 

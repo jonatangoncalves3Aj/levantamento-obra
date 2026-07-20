@@ -165,6 +165,27 @@ export function desenharOverlay() {
     }
   }
 
+  // Pins de pendências (losango; laranja = aberta, verde = resolvida)
+  for (const pd of prancha.pendencias || []) {
+    const cor = pd.status === 'resolvida' ? '#22c55e' : '#ef4444';
+    const r = 9 / state.zoom;
+    const g = el('g', { 'data-pendencia': pd.id, cursor: 'pointer' });
+    g.appendChild(el('path', {
+      d: `M ${pd.x} ${pd.y - r} L ${pd.x + r} ${pd.y} L ${pd.x} ${pd.y + r} L ${pd.x - r} ${pd.y} Z`,
+      fill: cor, stroke: '#fff', 'stroke-width': 1.6 / state.zoom,
+    }));
+    g.appendChild(el('text', {
+      x: pd.x, y: pd.y + f * 0.32, 'font-size': f * 0.85, 'text-anchor': 'middle',
+      fill: '#fff', 'font-weight': '700',
+    }, '!'));
+    if (state.mostrarNomes) {
+      g.appendChild(el('text', {
+        class: 'medida-rotulo', x: pd.x + r + f * 0.3, y: pd.y + f * 0.32, 'font-size': f * 0.9,
+      }, pd.titulo));
+    }
+    overlay.appendChild(g);
+  }
+
   // Pins de ambientes
   if (state.mostrarNomes) {
     for (const a of prancha.ambientes) {

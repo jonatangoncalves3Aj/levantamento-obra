@@ -190,6 +190,22 @@ export async function gerarRelatorioPDF() {
     styles: { fontSize: 8.5, cellPadding: 1.4 },
     headStyles: { fillColor: [45, 45, 50] },
   });
+  // Pendências abertas
+  const pendencias = proj.pranchas.flatMap(p =>
+    (p.pendencias || []).filter(x => x.status === 'aberta')
+      .map(x => [p.pavimento, x.titulo, x.responsavel || '—',
+        x.prazo ? new Date(x.prazo + 'T12:00:00').toLocaleDateString('pt-BR') : '—']));
+  if (pendencias.length) {
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 8,
+      head: [[{ content: `Pendências abertas (${pendencias.length})`, colSpan: 4, styles: { fillColor: [239, 68, 68], textColor: 255 } }],
+        ['Pavimento', 'Pendência', 'Responsável', 'Prazo']],
+      body: pendencias,
+      styles: { fontSize: 8.5, cellPadding: 1.4 },
+      headStyles: { fillColor: [45, 45, 50] },
+    });
+  }
+
   const imagem = await curvaSImagem(proj).catch(() => null);
   if (imagem) {
     const yImg = doc.lastAutoTable.finalY + 8;

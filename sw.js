@@ -16,6 +16,7 @@ const ASSETS = [
   './js/exportar-xlsx.js',
   './js/relatorio.js',
   './js/nuvem.js',
+  './js/rdo.js',
   './vendor/pdf.min.mjs',
   './vendor/pdf.worker.min.mjs',
   './vendor/xlsx.full.min.js',

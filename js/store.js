@@ -39,7 +39,7 @@ export function novoProjeto(nome = 'Levantamento') {
     id: uid(), nome, criadoEm: new Date().toISOString(), pranchas: [],
     pavimentos: [...PAVIMENTOS_PADRAO],
     catalogo: catalogoPadrao(), bdi: 25,
-    dataInicio: null, dataFim: null, snapshots: [],
+    dataInicio: null, dataFim: null, snapshots: [], rdos: [],
   };
 }
 
@@ -51,7 +51,9 @@ export function garantirCampos(proj) {
   proj.dataFim ??= null;
   proj.snapshots ??= [];
   proj.pavimentos ??= [...PAVIMENTOS_PADRAO];
+  proj.rdos ??= [];
   for (const p of proj.pranchas) {
+    p.pendencias ??= [];
     if (p.pavimento && !proj.pavimentos.includes(p.pavimento)) proj.pavimentos.push(p.pavimento);
     for (const a of p.ambientes) a.avanco ??= 0;
   }
@@ -72,6 +74,7 @@ export function novaPrancha(arquivoNome, pagina, pavimento, disciplina) {
     id: uid(), arquivoNome, pagina, pavimento, disciplina,
     escala: null,                 // { pxPorMetro (unid. base pt/m), origem: 'cota'|'carimbo' }
     ambientes: [], medicoes: [],  // medições avulsas: linear / contagem
+    pendencias: [],               // pins de compatibilização/pendência
   };
 }
 
