@@ -774,6 +774,33 @@ $('btn-nomes').addEventListener('click', () => {
   desenharOverlay();
 });
 
+/* =============== Instalação (PWA) =============== */
+
+let promptInstalacao = null;
+const emAppInstalado = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+
+if (!emAppInstalado) $('btn-instalar').hidden = false;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  promptInstalacao = e;
+  $('btn-instalar').hidden = false;
+});
+
+window.addEventListener('appinstalled', () => { $('btn-instalar').hidden = true; });
+
+$('btn-instalar').addEventListener('click', async () => {
+  if (promptInstalacao) {
+    promptInstalacao.prompt();
+    const { outcome } = await promptInstalacao.userChoice;
+    if (outcome === 'accepted') $('btn-instalar').hidden = true;
+    promptInstalacao = null;
+  } else {
+    $('dlg-instalar').showModal();
+  }
+});
+$('dlg-instalar-fechar').addEventListener('click', () => $('dlg-instalar').close());
+
 /* =============== Tabela: exportações =============== */
 
 $('btn-csv').addEventListener('click', exportarCSV);
@@ -817,6 +844,13 @@ function salvarConfigNuvem() {
   nuvem.salvarConfig(url, key);
   return true;
 }
+
+$('btn-nuvem-testar').addEventListener('click', async () => {
+  if (!salvarConfigNuvem()) return;
+  nuvemStatus('Testando conexão…');
+  const r = await nuvem.testarConexao();
+  nuvemStatus((r.ok ? '&check; ' : '') + r.msg, r.ok);
+});
 
 $('btn-nuvem-enviar').addEventListener('click', async () => {
   if (!salvarConfigNuvem()) return;

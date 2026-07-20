@@ -42,6 +42,38 @@ async function api(caminho, opcoes = {}) {
   return resp;
 }
 
+// Testa credenciais e existência da tabela, com diagnóstico amigável
+export async function testarConexao() {
+  const c = lerConfig();
+  if (!c?.url || !c?.anonKey) return { ok: false, msg: 'Preencha a URL e a chave.' };
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(c.url)) {
+    return { ok: false, msg: `URL fora do padrão esperado (https://xxxx.supabase.co): "${c.url}"` };
+  }
+  let resp;
+  try {
+    resp = await fetch(`${c.url}/rest/v1/projetos?select=id&limit=1`, {
+      headers: {
+        apikey: c.anonKey,
+        ...(c.anonKey.startsWith('eyJ') ? { Authorization: `Bearer ${c.anonKey}` } : {}),
+      },
+    });
+  } catch {
+    return { ok: false, msg: 'Não consegui conectar — confira a URL e sua internet.' };
+  }
+  if (resp.ok) {
+    const linhas = await resp.json().catch(() => []);
+    return { ok: true, msg: `Conexão OK — tabela "projetos" encontrada (${linhas.length ? 'já há projeto salvo' : 'vazia, pronta para uso'}).` };
+  }
+  const corpo = await resp.text().catch(() => '');
+  if (resp.status === 401 || resp.status === 403) {
+    return { ok: false, msg: 'Chave recusada pelo servidor — confira se copiou a Publishable key (sb_publishable_…) inteira.' };
+  }
+  if (resp.status === 404 || corpo.includes('PGRST205') || corpo.includes('does not exist')) {
+    return { ok: false, msg: 'Conectou, mas a tabela "projetos" não existe — rode o script SQL do guia (passo 2) no SQL Editor.' };
+  }
+  return { ok: false, msg: `Servidor respondeu ${resp.status}: ${corpo.slice(0, 160)}` };
+}
+
 // Envia (cria ou atualiza) o projeto atual
 export async function enviarProjeto() {
   const proj = state.projeto;

@@ -48,6 +48,7 @@
 
     <div class="topbar-fim">
       <a class="link-voltar" href="https://jonatangoncalves3aj.github.io/dimensionamento-saneamento/" title="Dimensionamento de Saneamento">Saneamento &nearr;</a>
+      <button id="btn-instalar" class="btn-ghost" hidden>&#128241; Instalar app</button>
       <button id="btn-pranchas" class="btn-laranja">+ Pranchas</button>
     </div>
   </header>
@@ -204,6 +205,18 @@
     </div>
   </dialog>
 
+  <!-- Diálogo: instalar no celular -->
+  <dialog id="dlg-instalar">
+    <h3>&#128241; Instalar no aparelho</h3>
+    <p class="dica"><strong>Android (Chrome):</strong> menu &#8942; do navegador &rarr; <strong>"Instalar app"</strong> (ou "Adicionar &agrave; tela inicial").</p>
+    <p class="dica"><strong>Samsung Internet:</strong> menu &#9776; &rarr; "Adicionar p&aacute;gina a" &rarr; "Tela inicial".</p>
+    <p class="dica"><strong>iPhone (Safari):</strong> bot&atilde;o Compartilhar &#8963; &rarr; <strong>"Adicionar &agrave; Tela de In&iacute;cio"</strong>.</p>
+    <p class="dica">Depois de instalado, o app abre em tela cheia e funciona offline.</p>
+    <div class="dlg-botoes">
+      <button id="dlg-instalar-fechar" class="btn-laranja">Entendi</button>
+    </div>
+  </dialog>
+
   <!-- Diálogo: nuvem (banco de dados) -->
   <dialog id="dlg-nuvem">
     <h3>&#9729; Nuvem — banco de dados</h3>
@@ -216,6 +229,7 @@
     <div id="nuvem-lista"></div>
     <div class="dlg-botoes">
       <button id="dlg-nuvem-fechar" class="btn-ghost">Fechar</button>
+      <button id="btn-nuvem-testar" class="btn-ghost">Testar conex&atilde;o</button>
       <button id="btn-nuvem-baixar" class="btn-ghost">Baixar da nuvem</button>
       <button id="btn-nuvem-enviar" class="btn-laranja">Enviar projeto atual</button>
     </div>
