@@ -38,10 +38,15 @@ create policy "acesso via anon key"
 
 ## Passo 3 — Copiar as credenciais
 
-No painel do Supabase, vá em **Settings → API** e copie:
+No painel do Supabase, vá em **Settings** e copie:
 
-- **Project URL** (ex.: `https://abcdefgh.supabase.co`)
-- **anon public key** (um texto longo começando com `eyJ…`)
+- **Project URL** — na seção **Data API** (ex.: `https://abcdefgh.supabase.co`).
+  Dica: o código na barra de endereço do navegador
+  (`supabase.com/dashboard/project/abcdefgh`) é o mesmo da URL.
+- **A chave pública** — na seção **API Keys**:
+  - painel novo: a **Publishable key** (começa com `sb_publishable_…`);
+  - painel antigo: a **anon public key** (começa com `eyJ…`).
+  As duas funcionam no app.
 
 ## Passo 4 — Configurar no app
 
@@ -54,8 +59,8 @@ cole a URL e a chave, e salve. Pronto:
 
 ## Segurança — leia antes de usar
 
-A chave *anon* dá acesso de leitura e escrita à tabela `projetos` para quem
-a possuir. Para uso pessoal/da equipe isso é aceitável (a chave fica só nos
+A chave pública (*publishable*/*anon*) dá acesso de leitura e escrita à
+tabela `projetos` para quem a possuir. Para uso pessoal/da equipe isso é aceitável (a chave fica só nos
 seus aparelhos), mas **não publique a chave** em lugares públicos.
 Se precisar de contas com login e permissões por usuário, o caminho é
 ativar o Supabase Auth e trocar a policy acima por uma baseada em
