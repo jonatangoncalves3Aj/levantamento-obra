@@ -26,15 +26,15 @@ export function configurado() {
 async function api(caminho, opcoes = {}) {
   const c = lerConfig();
   if (!c) throw new Error('Nuvem não configurada.');
-  const resp = await fetch(`${c.url}/rest/v1/${caminho}`, {
-    ...opcoes,
-    headers: {
-      apikey: c.anonKey,
-      Authorization: `Bearer ${c.anonKey}`,
-      'Content-Type': 'application/json',
-      ...(opcoes.headers || {}),
-    },
-  });
+  // Chaves legadas (JWT, "eyJ…") vão também no Authorization; as novas
+  // "sb_publishable_…" usam apenas o cabeçalho apikey
+  const headers = {
+    apikey: c.anonKey,
+    'Content-Type': 'application/json',
+    ...(opcoes.headers || {}),
+  };
+  if (c.anonKey.startsWith('eyJ')) headers.Authorization = `Bearer ${c.anonKey}`;
+  const resp = await fetch(`${c.url}/rest/v1/${caminho}`, { ...opcoes, headers });
   if (!resp.ok) {
     const corpo = await resp.text().catch(() => '');
     throw new Error(`Servidor respondeu ${resp.status}: ${corpo.slice(0, 200)}`);
