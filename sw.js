@@ -1,5 +1,5 @@
 // Service Worker — Levantamento de Obra
-const CACHE = 'levantamento-v2';
+const CACHE = 'levantamento-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -40,11 +40,21 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// Rede primeiro (mantendo o cache atualizado); cache só quando offline.
+// Assim toda atualização publicada chega na próxima abertura com internet.
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   // Não intercepta chamadas externas (ex.: API do banco de dados na nuvem)
   if (!e.request.url.startsWith(self.location.origin)) return;
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    fetch(e.request)
+      .then(resp => {
+        if (resp.ok) {
+          const copia = resp.clone();
+          caches.open(CACHE).then(cache => cache.put(e.request, copia));
+        }
+        return resp;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
