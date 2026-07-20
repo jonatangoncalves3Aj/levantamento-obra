@@ -13,7 +13,8 @@ export function lerConfig() {
 }
 
 export function salvarConfig(url, anonKey) {
-  const limpo = { url: url.replace(/\/+$/, ''), anonKey: anonKey.trim() };
+  const atual = lerConfig() || {};
+  const limpo = { ...atual, url: url.replace(/\/+$/, ''), anonKey: anonKey.trim() };
   localStorage.setItem(CHAVE_CONFIG, JSON.stringify(limpo));
   return limpo;
 }
@@ -23,17 +24,84 @@ export function configurado() {
   return !!(c?.url && c?.anonKey);
 }
 
+/* ---------- Conta (Supabase Auth, e-mail + senha) ---------- */
+
+const CHAVE_SESSAO = 'levantamento:sessao';
+
+export function lerSessao() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_SESSAO)) || null; }
+  catch { return null; }
+}
+
+function gravarSessao(dados) {
+  if (!dados) { localStorage.removeItem(CHAVE_SESSAO); return null; }
+  const sessao = {
+    access_token: dados.access_token,
+    refresh_token: dados.refresh_token,
+    expira_em: Date.now() + (dados.expires_in ?? 3600) * 1000,
+    email: dados.user?.email || lerSessao()?.email || '',
+  };
+  localStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao));
+  return sessao;
+}
+
+async function authFetch(caminho, corpo) {
+  const c = lerConfig();
+  if (!c) throw new Error('Configure a URL e a chave primeiro.');
+  const resp = await fetch(`${c.url}/auth/v1/${caminho}`, {
+    method: 'POST',
+    headers: { apikey: c.anonKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify(corpo),
+  });
+  const dados = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    const msg = dados.msg || dados.error_description || dados.message || `erro ${resp.status}`;
+    throw new Error(msg);
+  }
+  return dados;
+}
+
+export async function entrar(email, senha) {
+  const dados = await authFetch('token?grant_type=password', { email, password: senha });
+  return gravarSessao(dados);
+}
+
+export async function cadastrar(email, senha) {
+  const dados = await authFetch('signup', { email, password: senha });
+  if (dados.access_token) return gravarSessao(dados);
+  return null; // confirmação por e-mail pendente
+}
+
+export function sair() { gravarSessao(null); }
+
+async function tokenValido() {
+  let s = lerSessao();
+  if (!s) return null;
+  if (Date.now() > s.expira_em - 60_000) {
+    try {
+      const dados = await authFetch('token?grant_type=refresh_token', { refresh_token: s.refresh_token });
+      s = gravarSessao(dados);
+    } catch {
+      gravarSessao(null);
+      throw new Error('Sessão expirou — entre novamente.');
+    }
+  }
+  return s.access_token;
+}
+
 async function api(caminho, opcoes = {}) {
   const c = lerConfig();
   if (!c) throw new Error('Nuvem não configurada.');
-  // Chaves legadas (JWT, "eyJ…") vão também no Authorization; as novas
-  // "sb_publishable_…" usam apenas o cabeçalho apikey
   const headers = {
     apikey: c.anonKey,
     'Content-Type': 'application/json',
     ...(opcoes.headers || {}),
   };
-  if (c.anonKey.startsWith('eyJ')) headers.Authorization = `Bearer ${c.anonKey}`;
+  // Logado: o token do usuário autentica (RLS por dono). Sem login:
+  // modo legado — chave JWT antiga vai no Authorization; sb_publishable_ não.
+  const token = await tokenValido();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  else if (c.anonKey.startsWith('eyJ')) headers.Authorization = `Bearer ${c.anonKey}`;
   const resp = await fetch(`${c.url}/rest/v1/${caminho}`, { ...opcoes, headers });
   if (!resp.ok) {
     const corpo = await resp.text().catch(() => '');
@@ -107,4 +175,39 @@ export async function baixarProjeto(id) {
 // Remove um projeto da nuvem
 export async function apagarNuvem(id) {
   await api(`projetos?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+/* ---------- Sincronização automática (push com debounce) ---------- */
+
+let timerSync = null;
+let notificarEstado = () => {};
+
+export function autoSyncAtivo() {
+  return !!lerConfig()?.autoSync && !!lerSessao();
+}
+
+export function definirAutoSync(ligado) {
+  const c = lerConfig() || {};
+  c.autoSync = !!ligado;
+  localStorage.setItem(CHAVE_CONFIG, JSON.stringify(c));
+}
+
+export function iniciarAutoSync(aoMudarEstado) {
+  notificarEstado = aoMudarEstado || (() => {});
+}
+
+// Chamado a cada salvamento local; agrupa mudanças e envia após 3 s de pausa
+export function agendarSync() {
+  if (!autoSyncAtivo()) return;
+  clearTimeout(timerSync);
+  notificarEstado('pendente');
+  timerSync = setTimeout(async () => {
+    notificarEstado('enviando');
+    try {
+      await enviarProjeto();
+      notificarEstado('ok');
+    } catch (e) {
+      notificarEstado('erro', e.message);
+    }
+  }, 3000);
 }

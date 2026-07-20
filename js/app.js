@@ -2,7 +2,7 @@
 
 import {
   state, uid, novoProjeto, novaPrancha, novoAmbiente,
-  pranchaAtual, ambienteSel, salvar, carregarProjeto,
+  pranchaAtual, ambienteSel, salvar, carregarProjeto, aoSalvar,
   salvarPdf, limparPdfsOrfaos, iniciarHistorico, desfazer, refazer,
   listarProjetos, lerProjeto, excluirProjeto, idsPranchasTodosProjetos,
   exportarProjetoJSON, importarProjetoJSON,
@@ -827,14 +827,90 @@ function nuvemStatus(msg, ok = true) {
   el.innerHTML = ok ? msg : `<span class="alerta">${msg}</span>`;
 }
 
+function renderConta() {
+  const cont = $('nuvem-conta');
+  cont.innerHTML = '';
+  const sessao = nuvem.lerSessao();
+  if (sessao) {
+    const p = document.createElement('p');
+    p.className = 'dica';
+    p.innerHTML = `Conectado como <strong>${sessao.email}</strong> `;
+    const btnSair = document.createElement('button');
+    btnSair.className = 'btn-mini';
+    btnSair.textContent = 'Sair';
+    btnSair.addEventListener('click', () => { nuvem.sair(); renderConta(); atualizarIndicadorSync(); });
+    p.appendChild(btnSair);
+    cont.appendChild(p);
+    return;
+  }
+  cont.innerHTML = `
+    <label class="campo-label" style="margin-top:8px">Conta (e-mail)</label>
+    <input id="inp-conta-email" type="email" placeholder="voce@empresa.com" />
+    <label class="campo-label" style="margin-top:8px">Senha</label>
+    <input id="inp-conta-senha" type="password" placeholder="mínimo 6 caracteres" />
+    <div class="dlg-botoes" style="justify-content:flex-start;margin-top:8px">
+      <button id="btn-conta-entrar" class="btn-laranja">Entrar</button>
+      <button id="btn-conta-cadastrar" class="btn-ghost">Criar conta</button>
+    </div>`;
+  const credenciais = () => {
+    if (!salvarConfigNuvem()) return null;
+    const email = $('inp-conta-email').value.trim();
+    const senha = $('inp-conta-senha').value;
+    if (!email || senha.length < 6) { nuvemStatus('Informe e-mail e senha (mínimo 6 caracteres).', false); return null; }
+    return { email, senha };
+  };
+  $('btn-conta-entrar').addEventListener('click', async () => {
+    const c = credenciais();
+    if (!c) return;
+    nuvemStatus('Entrando…');
+    try {
+      await nuvem.entrar(c.email, c.senha);
+      nuvemStatus('&check; Conectado.');
+      renderConta(); atualizarIndicadorSync();
+    } catch (e) { nuvemStatus('Falha ao entrar: ' + e.message, false); }
+  });
+  $('btn-conta-cadastrar').addEventListener('click', async () => {
+    const c = credenciais();
+    if (!c) return;
+    nuvemStatus('Criando conta…');
+    try {
+      const sessao = await nuvem.cadastrar(c.email, c.senha);
+      if (sessao) { nuvemStatus('&check; Conta criada e conectada.'); renderConta(); atualizarIndicadorSync(); }
+      else nuvemStatus('Conta criada — <strong>confirme pelo link enviado ao seu e-mail</strong> e depois clique em Entrar.');
+    } catch (e) { nuvemStatus('Falha ao criar conta: ' + e.message, false); }
+  });
+}
+
 $('btn-nuvem').addEventListener('click', () => {
   const c = nuvem.lerConfig();
   $('inp-nuvem-url').value = c?.url || '';
   $('inp-nuvem-key').value = c?.anonKey || '';
+  $('chk-autosync').checked = !!c?.autoSync;
   $('nuvem-status').hidden = true;
   $('nuvem-lista').innerHTML = '';
+  renderConta();
   $('dlg-nuvem').showModal();
 });
+
+$('chk-autosync').addEventListener('change', () => {
+  nuvem.definirAutoSync($('chk-autosync').checked);
+  if ($('chk-autosync').checked && !nuvem.lerSessao()) {
+    nuvemStatus('A sincronização automática só funciona com login — entre ou crie uma conta acima.', false);
+  }
+  atualizarIndicadorSync();
+});
+
+function atualizarIndicadorSync(estado) {
+  const b = $('btn-nuvem');
+  if (estado === 'pendente' || estado === 'enviando') { b.textContent = '☁…'; b.title = 'Sincronizando…'; }
+  else if (estado === 'erro') { b.textContent = '☁!'; b.title = 'Falha na sincronização — abra para ver'; }
+  else if (nuvem.autoSyncAtivo()) { b.textContent = '☁✓'; b.title = 'Sincronização automática ativa'; }
+  else { b.textContent = '☁'; b.title = 'Nuvem — salvar/baixar do banco de dados'; }
+}
+
+nuvem.iniciarAutoSync((estado) => atualizarIndicadorSync(estado));
+aoSalvar(() => nuvem.agendarSync());
+atualizarIndicadorSync();
 $('dlg-nuvem-fechar').addEventListener('click', () => $('dlg-nuvem').close());
 
 function salvarConfigNuvem() {

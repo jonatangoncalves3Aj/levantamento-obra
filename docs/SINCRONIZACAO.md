@@ -65,3 +65,46 @@ seus aparelhos), mas **não publique a chave** em lugares públicos.
 Se precisar de contas com login e permissões por usuário, o caminho é
 ativar o Supabase Auth e trocar a policy acima por uma baseada em
 `auth.uid()` — evolução natural desta base.
+
+---
+
+## Contas por usuário (login) — recomendado
+
+Com login, cada pessoa vê **apenas os próprios projetos**, a chave pública
+deixa de dar acesso aos dados, e a **sincronização automática** pode ser
+ligada (o app envia o projeto para a nuvem sozinho a cada mudança).
+
+### 1. Habilitar e-mail/senha no Supabase
+
+Painel → **Authentication → Sign In / Providers → Email**: deixe habilitado.
+Para dispensar o clique de confirmação no e-mail, desative **"Confirm email"**
+(opcional, recomendado para uso interno da equipe).
+
+### 2. Trocar as regras de acesso (SQL Editor → Run)
+
+```sql
+alter table public.projetos
+  add column if not exists dono uuid default auth.uid();
+
+drop policy if exists "acesso via anon key" on public.projetos;
+
+create policy "dono seleciona" on public.projetos
+  for select using (auth.uid() = dono);
+create policy "dono insere" on public.projetos
+  for insert with check (auth.uid() = dono);
+create policy "dono atualiza" on public.projetos
+  for update using (auth.uid() = dono);
+create policy "dono apaga" on public.projetos
+  for delete using (auth.uid() = dono);
+```
+
+### 3. No app
+
+Botão **☁** → informe e-mail e senha → **Criar conta** (primeira vez) ou
+**Entrar**. Depois marque **"Sincronização automática"** — o ícone vira ☁✓
+e cada mudança é enviada à nuvem ~3 segundos depois de você parar de editar
+(☁… enquanto envia; ☁! se falhar).
+
+> Projetos enviados **antes** do login ficam sem dono e deixam de aparecer
+> na listagem — basta abri-los localmente e clicar em "Enviar projeto
+> atual" de novo depois de logado.

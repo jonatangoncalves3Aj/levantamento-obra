@@ -109,6 +109,9 @@ export function iniciarHistorico() {
   pilhaRefazer.length = 0;
 }
 
+let cbAposSalvar = null;
+export function aoSalvar(cb) { cbAposSalvar = cb; }
+
 export function salvar() {
   try {
     const json = JSON.stringify(state.projeto);
@@ -123,6 +126,7 @@ export function salvar() {
     localStorage.setItem(prefixoProj(state.projeto.id), json);
     atualizarIndice(state.projeto);
     localStorage.setItem(CHAVE_ATIVO, state.projeto.id);
+    cbAposSalvar?.();
   } catch (e) { console.warn('Falha ao salvar projeto', e); }
 }
 

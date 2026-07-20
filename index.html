@@ -222,10 +222,12 @@
   <dialog id="dlg-nuvem">
     <h3>&#9729; Nuvem — banco de dados</h3>
     <p class="dica">Salve seus projetos num banco Supabase e acesse de qualquer aparelho. <a href="docs/SINCRONIZACAO.md" target="_blank" style="color:var(--laranja-2)">Como configurar (5 min)</a></p>
+    <div id="nuvem-conta"></div>
     <label class="campo-label" style="margin-top:10px">URL do projeto Supabase</label>
     <input id="inp-nuvem-url" placeholder="https://xxxx.supabase.co" />
     <label class="campo-label" style="margin-top:8px">Chave anon (public)</label>
     <input id="inp-nuvem-key" placeholder="eyJ..." />
+    <label class="campo-inline" style="margin-top:10px"><input type="checkbox" id="chk-autosync" style="width:auto" /> Sincroniza&ccedil;&atilde;o autom&aacute;tica (requer login)</label>
     <p class="resultado" id="nuvem-status" hidden></p>
     <div id="nuvem-lista"></div>
     <div class="dlg-botoes">
