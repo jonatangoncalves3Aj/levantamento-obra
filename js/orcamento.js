@@ -149,6 +149,26 @@ export function adicionarServico() {
   salvar(); renderOrcamento();
 }
 
+// Importa serviços de um CSV "nome;un;preço[;fonte]" (aceita , ou ; e vírgula decimal)
+export function importarPrecosCSV(texto) {
+  const linhas = texto.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let novos = 0, atualizados = 0;
+  for (const linha of linhas) {
+    const sep = linha.includes(';') ? ';' : ',';
+    const partes = linha.split(sep).map(x => x.trim().replace(/^"|"$/g, ''));
+    if (partes.length < 3) continue;
+    const [nome, un, precoBruto, fonteBruta] = partes;
+    const preco = num(precoBruto);
+    if (!nome || preco === null) continue;                 // cabeçalho/linha inválida
+    const fonte = Object.keys(FONTES).includes(fonteBruta) ? fonteBruta : 'manual';
+    const existente = state.projeto.catalogo.find(s => s.nome.toLowerCase() === nome.toLowerCase());
+    if (existente) { existente.preco = preco; if (un) existente.un = un; atualizados++; }
+    else { state.projeto.catalogo.push({ id: uid(), nome, un: un || 'un', fonte, qtdManual: 0, preco }); novos++; }
+  }
+  salvar(); renderOrcamento();
+  return { novos, atualizados };
+}
+
 export function exportarOrcamentoCSV() {
   const proj = state.projeto;
   const { linhas, custoDireto } = linhasOrcamento(proj);

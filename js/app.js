@@ -7,7 +7,7 @@ import {
   listarProjetos, lerProjeto, excluirProjeto, idsPranchasTodosProjetos,
   exportarProjetoJSON, importarProjetoJSON,
 } from './store.js';
-import { renderOrcamento, adicionarServico, exportarOrcamentoCSV } from './orcamento.js';
+import { renderOrcamento, adicionarServico, exportarOrcamentoCSV, importarPrecosCSV } from './orcamento.js';
 import { renderAvanco, registrarSnapshot } from './avanco.js';
 import { renderRDO, novoRDO } from './rdo.js';
 import { exportarXLSX } from './exportar-xlsx.js';
@@ -489,6 +489,15 @@ overlay.addEventListener('click', (e) => {
 
   // calibrar / lado / perimetro / linear acumulam pontos
   if (!state.desenho) state.desenho = { pontos: [] };
+  // Snap ortogonal: quase-horizontal/vertical em relação ao ponto anterior
+  // (ou sempre, com Shift pressionado)
+  const ant = state.desenho.pontos[state.desenho.pontos.length - 1];
+  if (ant && ['perimetro', 'linear', 'calibrar'].includes(state.tool)) {
+    const dx = pt.x - ant.x, dy = pt.y - ant.y;
+    const forcar = e.shiftKey;
+    if (Math.abs(dy) < (forcar ? Math.abs(dx) : Math.abs(dx) * 0.12)) pt.y = ant.y;
+    else if (Math.abs(dx) < (forcar ? Math.abs(dy) : Math.abs(dy) * 0.12)) pt.x = ant.x;
+  }
   state.desenho.pontos.push(pt);
   desenharOverlay();
 
@@ -1064,6 +1073,14 @@ $('btn-nuvem-baixar').addEventListener('click', async () => {
 
 $('btn-orc-add').addEventListener('click', adicionarServico);
 $('btn-rdo-novo').addEventListener('click', novoRDO);
+$('btn-orc-importar').addEventListener('click', () => $('inp-csv-precos').click());
+$('inp-csv-precos').addEventListener('change', async (e) => {
+  const arq = e.target.files[0];
+  e.target.value = '';
+  if (!arq) return;
+  const { novos, atualizados } = importarPrecosCSV(await arq.text());
+  alert(`Importação concluída: ${novos} serviço(s) novo(s), ${atualizados} preço(s) atualizado(s).`);
+});
 $('btn-orc-csv').addEventListener('click', exportarOrcamentoCSV);
 $('btn-orc-imprimir').addEventListener('click', () => window.print());
 $('inp-bdi').addEventListener('change', () => {
