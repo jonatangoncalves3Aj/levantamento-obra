@@ -1,7 +1,7 @@
 // Exportação XLSX — pasta de trabalho com abas Quantitativos, Orçamento e Avanço
 // Usa SheetJS (vendor/xlsx.full.min.js, carregado como script global XLSX)
 
-import { state, ordenarPavimentos } from './store.js';
+import { state, ordenarPavimentos, ambientesPorPavimento } from './store.js';
 import { calcAmbiente, num } from './calc.js';
 import { FONTES, quantidadeServico } from './orcamento.js';
 import { avancoGlobal } from './avanco.js';
@@ -17,11 +17,7 @@ function abaQuantitativos(proj) {
     'Pavimento', 'Ambiente', 'Área (m²)', 'Lado (m)', 'Perímetro (m)', 'PD osso (m)', 'PD acab. (m)',
     'Parede bruta (m²)', 'nº vãos', 'Desc. vãos (m²)', 'Parede acab. (m²)', 'Parede líq. (m²)', 'Qtd.',
   ]];
-  const porPav = new Map();
-  for (const p of proj.pranchas) {
-    if (!porPav.has(p.pavimento)) porPav.set(p.pavimento, []);
-    porPav.get(p.pavimento).push(...p.ambientes);
-  }
+  const porPav = ambientesPorPavimento(proj);
   for (const pav of ordenarPavimentos(proj, [...porPav.keys()])) {
     const sub = { area: 0, bruta: 0, desc: 0, acab: 0, liq: 0, vaos: 0 };
     for (const a of porPav.get(pav)) {
@@ -79,11 +75,7 @@ function abaOrcamento(proj) {
 
 function abaAvanco(proj) {
   const linhas = [['Pavimento', 'Ambiente', 'Área (m²)', 'Avanço (%)']];
-  const porPav = new Map();
-  for (const p of proj.pranchas) {
-    if (!porPav.has(p.pavimento)) porPav.set(p.pavimento, []);
-    porPav.get(p.pavimento).push(...p.ambientes);
-  }
+  const porPav = ambientesPorPavimento(proj);
   for (const pav of ordenarPavimentos(proj, [...porPav.keys()])) {
     for (const a of porPav.get(pav)) {
       linhas.push([pav, a.nome, rd(num(a.area)), rd(num(a.avanco) ?? 0, 0)]);
@@ -120,11 +112,7 @@ function abaInstalacoes(proj) {
   linhas.push([]);
   linhas.push(['ESTIMATIVA PARAMÉTRICA (pelos ambientes levantados)']);
   linhas.push(['Pavimento', 'Ambiente', 'Tipo', ...Object.values(ITENS_INSTALACAO), 'Qtd.']);
-  const porPav = new Map();
-  for (const p of proj.pranchas) {
-    if (!porPav.has(p.pavimento)) porPav.set(p.pavimento, []);
-    porPav.get(p.pavimento).push(...p.ambientes);
-  }
+  const porPav = ambientesPorPavimento(proj);
   for (const pav of ordenarPavimentos(proj, [...porPav.keys()])) {
     for (const a of porPav.get(pav)) {
       const tipo = classificarAmbiente(a);

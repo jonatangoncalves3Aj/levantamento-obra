@@ -1,7 +1,7 @@
 // Relatório PDF — capa, resumo, quantitativos, orçamento (curva ABC),
 // avanço físico e curva S. Usa jsPDF + autotable (vendor, globais).
 
-import { state, ordenarPavimentos } from './store.js';
+import { state, ordenarPavimentos, ambientesPorPavimento } from './store.js';
 import { calcAmbiente, fmt, num } from './calc.js';
 import { FONTES, quantidadeServico } from './orcamento.js';
 import { avancoGlobal } from './avanco.js';
@@ -12,11 +12,7 @@ const CINZA = [90, 90, 96];
 const dataBR = (d = new Date()) => d.toLocaleDateString('pt-BR');
 
 function porPavimento(proj) {
-  const m = new Map();
-  for (const p of proj.pranchas) {
-    if (!m.has(p.pavimento)) m.set(p.pavimento, []);
-    m.get(p.pavimento).push(...p.ambientes);
-  }
+  const m = ambientesPorPavimento(proj);
   return ordenarPavimentos(proj, [...m.keys()]).map(pav => [pav, m.get(pav)]);
 }
 

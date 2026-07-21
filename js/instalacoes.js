@@ -3,7 +3,7 @@
 // Regras simplificadas inspiradas na prática usual/NBR 5410; a classificação
 // de cada ambiente pode ser ajustada na própria tabela (fica salva no projeto).
 
-import { state, salvar, uid, ordenarPavimentos } from './store.js';
+import { state, salvar, uid, ordenarPavimentos, ambientesPorPavimento } from './store.js';
 import { calcAmbiente, fmt, num } from './calc.js';
 
 const scroll = document.getElementById('inst-scroll');
@@ -199,11 +199,7 @@ export function renderInstalacoes() {
   tabela.appendChild(thead);
   const tbody = document.createElement('tbody');
 
-  const porPav = new Map();
-  for (const p of proj.pranchas) {
-    if (!porPav.has(p.pavimento)) porPav.set(p.pavimento, []);
-    porPav.get(p.pavimento).push(...p.ambientes);
-  }
+  const porPav = ambientesPorPavimento(proj);
 
   for (const pavimento of ordenarPavimentos(proj, [...porPav.keys()])) {
     const ambientes = porPav.get(pavimento);

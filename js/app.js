@@ -627,7 +627,39 @@ overlay.addEventListener('click', (e) => {
 
   if (state.tool === 'calibrar' && state.desenho.pontos.length === 2) abrirCalibrar();
   if (state.tool === 'lado' && state.desenho.pontos.length === 2) medirLado();
+  if (state.tool === 'pavzona' && state.desenho.pontos.length === 2) abrirZonaPavimento();
 });
+
+// Reatribui a outro pavimento os ambientes dentro do retângulo marcado
+// (folhas com mais de um pavimento desenhado lado a lado)
+function abrirZonaPavimento() {
+  const p = pranchaAtual();
+  const [a, b] = state.desenho.pontos;
+  const x1 = Math.min(a.x, b.x), x2 = Math.max(a.x, b.x);
+  const y1 = Math.min(a.y, b.y), y2 = Math.max(a.y, b.y);
+  const dentro = p.ambientes.filter(am =>
+    am.pin.x >= x1 && am.pin.x <= x2 && am.pin.y >= y1 && am.pin.y <= y2);
+  if (!dentro.length) {
+    alert('Nenhum ambiente dentro da região marcada — marque os dois cantos opostos em volta da planta desejada (os pins precisam estar dentro).');
+    setTool(null);
+    return;
+  }
+  $('dlg-zona-msg').textContent =
+    `${dentro.length} ambiente(s) na região: ${dentro.map(x => x.nome).join(', ').slice(0, 120)}`;
+  const cont = $('dlg-zona-pav');
+  cont.innerHTML = '';
+  let escolhido = p.pavimento;
+  cont.appendChild(selPavimento(escolhido, v => { escolhido = v; }));
+  const dlg = $('dlg-zona');
+  dlg.showModal();
+  $('dlg-zona-ok').onclick = () => {
+    dlg.close();
+    for (const am of dentro) am.pavimento = escolhido;
+    setTool(null);
+    salvar(); atualizarTudo();
+  };
+  $('dlg-zona-cancelar').onclick = () => { dlg.close(); setTool(null); };
+}
 
 function abrirPendencia(pt) {
   const dlg = $('dlg-pendencia');
@@ -909,6 +941,23 @@ function cardAmbiente(p, a) {
   grade.appendChild(campoNum('Perím. (m)', a.perimetro, v => { a.perimetro = v; }));
   grade.appendChild(campoNum('PD osso (m)', a.pdOsso, v => { a.pdOsso = v; }));
   grade.appendChild(campoNum('PD acab. (m)', a.pdAcab, v => { a.pdAcab = v; }));
+
+  // Pavimento do ambiente (para folhas com mais de um pavimento desenhado)
+  const wrapPav = document.createElement('div');
+  const labPav = document.createElement('label');
+  labPav.textContent = 'Pavimento';
+  const selPavAmb = document.createElement('select');
+  selPavAmb.appendChild(new Option('(da prancha)', '', false, !a.pavimento));
+  for (const pv of state.projeto.pavimentos) {
+    selPavAmb.appendChild(new Option(pv, pv, false, a.pavimento === pv));
+  }
+  selPavAmb.addEventListener('change', () => {
+    a.pavimento = selPavAmb.value || null;
+    salvar();
+  });
+  wrapPav.appendChild(labPav);
+  wrapPav.appendChild(selPavAmb);
+  grade.appendChild(wrapPav);
   card.appendChild(grade);
 
   // Avanço físico

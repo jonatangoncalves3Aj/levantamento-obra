@@ -1,7 +1,7 @@
 // Vista Avanço — % executado por ambiente/pavimento e curva S (planejado × real)
 // Cores das séries validadas p/ superfície escura: Real #ea580c, Planejado #3b82f6
 
-import { state, salvar, ordenarPavimentos } from './store.js';
+import { state, salvar, ordenarPavimentos, ambientesPorPavimento } from './store.js';
 import { fmt, num } from './calc.js';
 
 const scroll = document.getElementById('avanco-scroll');
@@ -60,12 +60,8 @@ export function renderAvanco() {
     return;
   }
 
-  // Por pavimento
-  const porPav = new Map();
-  for (const p of proj.pranchas) {
-    if (!porPav.has(p.pavimento)) porPav.set(p.pavimento, []);
-    porPav.get(p.pavimento).push(...p.ambientes);
-  }
+  // Por pavimento (efetivo — ambientes podem ter pavimento separado da prancha)
+  const porPav = ambientesPorPavimento(proj);
 
   for (const pavimento of ordenarPavimentos(proj, [...porPav.keys()])) {
     const ambientes = porPav.get(pavimento);

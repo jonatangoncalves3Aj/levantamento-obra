@@ -1,6 +1,6 @@
 // Vista Tabela — quantitativos por pavimento, subtotais, CSV e impressão
 
-import { state, salvar, ordenarPavimentos } from './store.js';
+import { state, salvar, ordenarPavimentos, ambientesPorPavimento } from './store.js';
 import { calcAmbiente, fmt, num } from './calc.js';
 import { comprimentoPolilinha } from './calc.js';
 
@@ -12,11 +12,8 @@ const COLS = [
 ];
 
 function grupos() {
-  const porPav = new Map();
-  for (const p of state.projeto?.pranchas || []) {
-    if (!porPav.has(p.pavimento)) porPav.set(p.pavimento, []);
-    porPav.get(p.pavimento).push(p);
-  }
+  if (!state.projeto) return new Map();
+  const porPav = ambientesPorPavimento(state.projeto);
   const ordenado = new Map();
   for (const nome of ordenarPavimentos(state.projeto, [...porPav.keys()])) {
     ordenado.set(nome, porPav.get(nome));
@@ -62,7 +59,7 @@ export function renderTabela() {
 
   const totalGeral = { area: 0, bruta: 0, desc: 0, acab: 0, liq: 0, vaos: 0 };
 
-  for (const [pavimento, pranchas] of grupos()) {
+  for (const [pavimento, ambientes] of grupos()) {
     const trg = document.createElement('tr');
     trg.className = 'grupo';
     const tdg = document.createElement('td');
@@ -73,32 +70,30 @@ export function renderTabela() {
 
     const sub = { area: 0, bruta: 0, desc: 0, acab: 0, liq: 0, vaos: 0 };
 
-    for (const prancha of pranchas) {
-      for (const a of prancha.ambientes) {
-        const c = calcAmbiente(a);
-        const tr = document.createElement('tr');
-        tr.appendChild(inputCel(a.nome, v => { a.nome = v; }, true));
-        tr.appendChild(inputCel(a.area, v => { a.area = v; a.areaOrigem = 'manual'; }));
-        tr.appendChild(inputCel(a.lado, v => { a.lado = v; }, true));
-        tr.appendChild(inputCel(a.perimetro, v => { a.perimetro = v; }));
-        tr.appendChild(inputCel(a.pdOsso, v => { a.pdOsso = v; }));
-        tr.appendChild(inputCel(a.pdAcab, v => { a.pdAcab = v; }));
-        tr.appendChild(celTexto(fmt(c.paredeBruta)));
-        tr.appendChild(celTexto(c.nVaos || ''));
-        tr.appendChild(celTexto(fmt(c.descVaos)));
-        tr.appendChild(celTexto(fmt(c.paredeAcab)));
-        tr.appendChild(celTexto(fmt(c.paredeLiq)));
-        tr.appendChild(inputCel(a.qtd, v => { a.qtd = v; }));
-        tbody.appendChild(tr);
+    for (const a of ambientes) {
+      const c = calcAmbiente(a);
+      const tr = document.createElement('tr');
+      tr.appendChild(inputCel(a.nome, v => { a.nome = v; }, true));
+      tr.appendChild(inputCel(a.area, v => { a.area = v; a.areaOrigem = 'manual'; }));
+      tr.appendChild(inputCel(a.lado, v => { a.lado = v; }, true));
+      tr.appendChild(inputCel(a.perimetro, v => { a.perimetro = v; }));
+      tr.appendChild(inputCel(a.pdOsso, v => { a.pdOsso = v; }));
+      tr.appendChild(inputCel(a.pdAcab, v => { a.pdAcab = v; }));
+      tr.appendChild(celTexto(fmt(c.paredeBruta)));
+      tr.appendChild(celTexto(c.nVaos || ''));
+      tr.appendChild(celTexto(fmt(c.descVaos)));
+      tr.appendChild(celTexto(fmt(c.paredeAcab)));
+      tr.appendChild(celTexto(fmt(c.paredeLiq)));
+      tr.appendChild(inputCel(a.qtd, v => { a.qtd = v; }));
+      tbody.appendChild(tr);
 
-        const q = c.qtd ?? 1;
-        if (c.area !== null) sub.area += c.area * q;
-        if (c.paredeBruta !== null) sub.bruta += c.paredeBruta * q;
-        if (c.descVaos !== null) sub.desc += c.descVaos * q;
-        if (c.paredeAcab !== null) sub.acab += c.paredeAcab * q;
-        if (c.paredeLiq !== null) sub.liq += c.paredeLiq * q;
-        sub.vaos += c.nVaos * q;
-      }
+      const q = c.qtd ?? 1;
+      if (c.area !== null) sub.area += c.area * q;
+      if (c.paredeBruta !== null) sub.bruta += c.paredeBruta * q;
+      if (c.descVaos !== null) sub.desc += c.descVaos * q;
+      if (c.paredeAcab !== null) sub.acab += c.paredeAcab * q;
+      if (c.paredeLiq !== null) sub.liq += c.paredeLiq * q;
+      sub.vaos += c.nVaos * q;
     }
 
     const trs = document.createElement('tr');
@@ -176,16 +171,14 @@ function renderMedicoesAvulsas() {
 /* ---------- Exportar CSV (padrão BR: ; e vírgula decimal) ---------- */
 export function exportarCSV() {
   const linhas = [COLS.join(';')];
-  for (const [pavimento, pranchas] of grupos()) {
-    for (const prancha of pranchas) {
-      for (const a of prancha.ambientes) {
-        const c = calcAmbiente(a);
-        linhas.push([
-          `${pavimento} — ${a.nome}`, fmt(c.area), a.lado || '', fmt(num(a.perimetro)),
-          fmt(num(a.pdOsso)), fmt(num(a.pdAcab)), fmt(c.paredeBruta), c.nVaos || 0,
-          fmt(c.descVaos), fmt(c.paredeAcab), fmt(c.paredeLiq), c.qtd ?? 1,
-        ].join(';'));
-      }
+  for (const [pavimento, ambientes] of grupos()) {
+    for (const a of ambientes) {
+      const c = calcAmbiente(a);
+      linhas.push([
+        `${pavimento} — ${a.nome}`, fmt(c.area), a.lado || '', fmt(num(a.perimetro)),
+        fmt(num(a.pdOsso)), fmt(num(a.pdAcab)), fmt(c.paredeBruta), c.nVaos || 0,
+        fmt(c.descVaos), fmt(c.paredeAcab), fmt(c.paredeLiq), c.qtd ?? 1,
+      ].join(';'));
     }
   }
   const blob = new Blob(['﻿' + linhas.join('\r\n')], { type: 'text/csv;charset=utf-8' });

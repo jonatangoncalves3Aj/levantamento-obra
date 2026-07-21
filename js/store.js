@@ -56,9 +56,31 @@ export function garantirCampos(proj) {
   for (const p of proj.pranchas) {
     p.pendencias ??= [];
     if (p.pavimento && !proj.pavimentos.includes(p.pavimento)) proj.pavimentos.push(p.pavimento);
-    for (const a of p.ambientes) a.avanco ??= 0;
+    for (const a of p.ambientes) {
+      a.avanco ??= 0;
+      if (a.pavimento && !proj.pavimentos.includes(a.pavimento)) proj.pavimentos.push(a.pavimento);
+    }
   }
   return proj;
+}
+
+// Pavimento efetivo de um ambiente: o próprio (quando a folha traz mais de
+// um pavimento desenhado e foi separada) ou o da prancha
+export function pavimentoDoAmbiente(prancha, a) {
+  return a.pavimento || prancha.pavimento;
+}
+
+// Ambientes de todo o projeto agrupados pelo pavimento efetivo
+export function ambientesPorPavimento(proj) {
+  const m = new Map();
+  for (const p of proj.pranchas) {
+    for (const a of p.ambientes) {
+      const pav = pavimentoDoAmbiente(p, a);
+      if (!m.has(pav)) m.set(pav, []);
+      m.get(pav).push(a);
+    }
+  }
+  return m;
 }
 
 // Ordena nomes de pavimento pela ordem definida no projeto (desconhecidos ao fim)
