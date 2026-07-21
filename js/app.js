@@ -1275,7 +1275,10 @@ function renderConta() {
     const btnSair = document.createElement('button');
     btnSair.className = 'btn-mini';
     btnSair.textContent = 'Sair';
-    btnSair.addEventListener('click', () => { nuvem.sair(); renderConta(); atualizarIndicadorSync(); });
+    btnSair.addEventListener('click', () => {
+      nuvem.sair(); renderConta(); atualizarIndicadorSync();
+      if (nuvem.exigeLogin()) { $('dlg-nuvem').close(); mostrarLogin(); }
+    });
     p.appendChild(btnSair);
     cont.appendChild(p);
     return;
@@ -1323,10 +1326,27 @@ $('btn-nuvem').addEventListener('click', () => {
   $('inp-nuvem-url').value = c?.url || '';
   $('inp-nuvem-key').value = c?.anonKey || '';
   $('chk-autosync').checked = !!c?.autoSync;
+  $('chk-exige-login').checked = nuvem.exigeLogin();
   $('nuvem-status').hidden = true;
   $('nuvem-lista').innerHTML = '';
   renderConta();
   $('dlg-nuvem').showModal();
+});
+
+$('chk-exige-login').addEventListener('change', () => {
+  // Guarda a conexão já preenchida, senão a trava apareceria sem URL/chave
+  const url = $('inp-nuvem-url').value.trim();
+  const key = $('inp-nuvem-key').value.trim();
+  if (url && key) nuvem.salvarConfig(url, key);
+  const ligar = $('chk-exige-login').checked;
+  nuvem.definirExigeLogin(ligar);
+  if (ligar && !nuvem.lerSessao()) {
+    nuvemStatus('Trava ativada. Ao recarregar, o app pedirá login — entre acima antes para não se trancar fora.', false);
+  } else if (ligar) {
+    nuvemStatus('Trava ativada — o app pedirá login ao abrir neste e nos outros aparelhos.');
+  } else {
+    nuvemStatus('Trava desligada — o app abre sem pedir login.');
+  }
 });
 
 $('chk-autosync').addEventListener('change', () => {
@@ -1349,6 +1369,69 @@ nuvem.iniciarAutoSync((estado) => atualizarIndicadorSync(estado));
 aoSalvar(() => nuvem.agendarSync());
 atualizarIndicadorSync();
 $('dlg-nuvem-fechar').addEventListener('click', () => $('dlg-nuvem').close());
+
+/* =============== Trava de login (opcional) =============== */
+
+function loginStatus(msg, ok = true) {
+  const el = $('login-status');
+  el.hidden = false;
+  el.textContent = msg;
+  el.classList.toggle('alerta', !ok);
+}
+
+function mostrarLogin() {
+  const c = nuvem.lerConfig();
+  $('login-url').value = c?.url || '';
+  $('login-key').value = c?.anonKey || '';
+  $('login-conexao').open = !nuvem.configurado();
+  $('login-status').hidden = true;
+  $('tela-login').hidden = false;
+}
+
+function salvarConexaoLogin() {
+  const url = $('login-url').value.trim();
+  const key = $('login-key').value.trim();
+  if (url && key) nuvem.salvarConfig(url, key);
+  if (!nuvem.configurado()) {
+    loginStatus('Informe a URL e a chave do banco em "Configurar conexão".', false);
+    $('login-conexao').open = true;
+    return false;
+  }
+  return true;
+}
+
+$('login-entrar').addEventListener('click', async () => {
+  if (!salvarConexaoLogin()) return;
+  const email = $('login-email').value.trim();
+  const senha = $('login-senha').value;
+  if (!email || !senha) return loginStatus('Informe e-mail e senha.', false);
+  loginStatus('Entrando…');
+  try {
+    await nuvem.entrar(email, senha);
+    $('tela-login').hidden = true;
+    renderConta(); atualizarIndicadorSync();
+  } catch (e) { loginStatus('Falha ao entrar: ' + e.message, false); }
+});
+
+$('login-criar').addEventListener('click', async () => {
+  if (!salvarConexaoLogin()) return;
+  const email = $('login-email').value.trim();
+  const senha = $('login-senha').value;
+  if (!email || senha.length < 6) return loginStatus('Informe e-mail e senha (mínimo 6 caracteres).', false);
+  loginStatus('Criando conta…');
+  try {
+    const sessao = await nuvem.cadastrar(email, senha);
+    if (sessao) { $('tela-login').hidden = true; renderConta(); atualizarIndicadorSync(); }
+    else loginStatus('Conta criada — confirme pelo link enviado ao seu e-mail e depois clique em Entrar.');
+  } catch (e) { loginStatus('Falha ao criar conta: ' + e.message, false); }
+});
+
+// Na abertura: se a trava estiver ligada e não houver sessão válida, bloqueia
+(async () => {
+  if (!nuvem.exigeLogin()) return;
+  if (await nuvem.sessaoAtiva()) return;
+  mostrarLogin();
+})();
 
 function salvarConfigNuvem() {
   const url = $('inp-nuvem-url').value.trim();

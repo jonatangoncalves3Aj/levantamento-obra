@@ -74,7 +74,7 @@ coordenação de obra completa. Interface 100% em pt-BR.
 | `rdo.js` | diário de obra + PDF |
 | `exportar-xlsx.js` | XLSX 3 abas (células de fórmula precisam de `{f, t, v}` — SheetJS descarta fórmula sem valor) |
 | `relatorio.js` | relatório PDF completo (capa, resumo, quantitativos, ABC, curva S, pendências) |
-| `nuvem.js` | Supabase REST: auth (entrar/cadastrar/refresh), envio/baixa de projetos, auto-sync 3 s, **conflito** (marca `atualizado_em` por projeto; `enviarProjeto(forcar)`) |
+| `nuvem.js` | Supabase REST: auth (entrar/cadastrar/refresh), envio/baixa de projetos, auto-sync 3 s, **conflito** (marca `atualizado_em` por projeto; `enviarProjeto(forcar)`). Trava de login opcional (`exigeLogin`/`definirExigeLogin`/`sessaoAtiva`) — overlay `#tela-login` no `index.html`, gate no fim de `app.js`. NB: é gate client-side (soft) num site estático público; a proteção real dos dados é o RLS |
 
 Modelo de dados: `projeto { pranchas[], pavimentos[], catalogo[], bdi,
 dataInicio/Fim, snapshots[], rdos[] }` → `prancha { pavimento, disciplina,

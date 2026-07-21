@@ -441,3 +441,24 @@ dialog h3 { margin: 0 0 6px; font-size: 1rem; font-weight: 700; letter-spacing: 
 .card-acoes .btn-mini { margin-top: 0; flex: 1; text-align: center; }
 .btn-excluir-amb { border-color: rgba(248,113,113,.5); color: var(--alerta); }
 .btn-excluir-amb:hover { border-color: var(--alerta); color: #fff; background: rgba(248,113,113,.15); }
+
+/* ---------- Tela de login (trava de acesso) ---------- */
+#tela-login {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: radial-gradient(1200px 600px at 50% -10%, #1b1b22, var(--fundo));
+}
+.login-caixa {
+  width: 100%; max-width: 380px; background: var(--fundo-2);
+  border: 1px solid var(--borda-2); border-radius: 16px; padding: 26px 24px;
+  box-shadow: var(--sombra-2);
+}
+.login-marca { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.login-marca img { width: 40px; height: 40px; border-radius: 9px; }
+.login-marca h1 { font-size: 1.15rem; margin: 0; font-weight: 800; letter-spacing: -.02em; }
+.login-marca span { color: var(--laranja-2); }
+.login-caixa .campo-label { margin-top: 6px; }
+.login-botoes { display: flex; gap: 10px; margin-top: 16px; }
+.login-botoes .btn-laranja, .login-botoes .btn-ghost { flex: 1; height: 38px; }
+#login-conexao { margin-top: 14px; }
+#login-conexao summary { color: var(--texto-2); }

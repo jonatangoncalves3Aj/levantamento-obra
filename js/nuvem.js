@@ -74,6 +74,22 @@ export async function cadastrar(email, senha) {
 
 export function sair() { gravarSessao(null); }
 
+// Sessão utilizável agora? (renova o token se estiver perto de expirar)
+export async function sessaoAtiva() {
+  try { return !!(await tokenValido()); }
+  catch { return false; }
+}
+
+/* ---------- Trava de acesso (login para abrir o app) ---------- */
+
+export function exigeLogin() { return !!lerConfig()?.exigeLogin; }
+
+export function definirExigeLogin(ligado) {
+  const c = lerConfig() || {};
+  c.exigeLogin = !!ligado;
+  localStorage.setItem(CHAVE_CONFIG, JSON.stringify(c));
+}
+
 async function tokenValido() {
   let s = lerSessao();
   if (!s) return null;

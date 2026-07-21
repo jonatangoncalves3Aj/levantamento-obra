@@ -18,6 +18,33 @@
   <link rel="stylesheet" href="css/levantamento.css" />
 </head>
 <body>
+  <!-- Tela de login (trava de acesso, opcional) -->
+  <div id="tela-login" hidden>
+    <div class="login-caixa">
+      <div class="login-marca">
+        <img src="icons/icon.svg" alt="" />
+        <h1>Levantamento <span>de Obra</span></h1>
+      </div>
+      <p class="dica" id="login-msg">Entre com sua conta para acessar.</p>
+      <label class="campo-label">E-mail</label>
+      <input id="login-email" type="email" placeholder="voce@empresa.com" autocomplete="username" />
+      <label class="campo-label" style="margin-top:8px">Senha</label>
+      <input id="login-senha" type="password" placeholder="sua senha" autocomplete="current-password" />
+      <div class="login-botoes">
+        <button id="login-entrar" class="btn-laranja">Entrar</button>
+        <button id="login-criar" class="btn-ghost">Criar conta</button>
+      </div>
+      <p class="resultado" id="login-status" hidden></p>
+      <details id="login-conexao">
+        <summary class="dica" style="cursor:pointer">Configurar conex&atilde;o (URL e chave do banco)</summary>
+        <label class="campo-label" style="margin-top:8px">URL do projeto Supabase</label>
+        <input id="login-url" placeholder="https://xxxx.supabase.co" />
+        <label class="campo-label" style="margin-top:8px">Chave p&uacute;blica (anon / publishable)</label>
+        <input id="login-key" placeholder="sb_publishable_… ou eyJ…" />
+      </details>
+    </div>
+  </div>
+
   <!-- Topbar -->
   <header class="topbar">
     <div class="marca">
@@ -152,7 +179,7 @@
 
       <section class="passo">
         <p class="dica">Atalhos: <strong>1&ndash;4</strong> ferramentas &middot; <strong>C</strong> calibrar &middot; <strong>A</strong> ambiente &middot; <strong>T</strong> planta/tabela &middot; <strong>N</strong> nomes &middot; <strong>Del</strong> excluir ambiente selecionado &middot; <strong>+/&minus;</strong> zoom &middot; <strong>0</strong> ajustar &middot; <strong>Ctrl+Z</strong> desfazer &middot; <strong>Esc</strong> cancelar &middot; arraste para navegar.</p>
-        <p class="dica" id="versao-app">Vers&atilde;o 3.8 &middot; 21/07/2026</p>
+        <p class="dica" id="versao-app">Vers&atilde;o 3.9 &middot; 21/07/2026</p>
       </section>
     </aside>
   </main>
@@ -336,6 +363,8 @@
     <label class="campo-label" style="margin-top:8px">Chave anon (public)</label>
     <input id="inp-nuvem-key" placeholder="eyJ..." />
     <label class="campo-inline" style="margin-top:10px"><input type="checkbox" id="chk-autosync" style="width:auto" /> Sincroniza&ccedil;&atilde;o autom&aacute;tica (requer login)</label>
+    <label class="campo-inline" style="margin-top:8px"><input type="checkbox" id="chk-exige-login" style="width:auto" /> Exigir login para abrir o app</label>
+    <p class="dica">Ao ligar, o app pede login (conta do banco) para abrir neste aparelho.</p>
     <p class="resultado" id="nuvem-status" hidden></p>
     <div id="nuvem-lista"></div>
     <div class="dlg-botoes">
