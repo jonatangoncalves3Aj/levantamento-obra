@@ -1,7 +1,7 @@
 // Vista Orçamento — serviços com quantidades vindas do levantamento,
 // curva ABC (A ≤ 80% acum., B ≤ 95%, C acima) e BDI
 
-import { state, uid, salvar } from './store.js';
+import { state, uid, salvar, totaisParedes } from './store.js';
 import { calcAmbiente, fmt, num } from './calc.js';
 import {
   ITENS_INSTALACAO, totaisInstalacoes, totaisRevestimento, FONTES_REVESTIMENTO,
@@ -10,7 +10,9 @@ import {
 const scroll = document.getElementById('orc-scroll');
 
 export const FONTES = {
-  paredeLiq: 'Parede líq. (m²)',
+  paredeLiq: 'Parede líq. — por ambiente (m²)',
+  paredeInterna: 'Parede interna medida (m²)',
+  paredeExterna: 'Parede externa medida (m²)',
   areaPiso: 'Área de piso (m²)',
   areaTeto: 'Área de teto (m²)',
   perimetro: 'Perímetro/rodapé (m)',
@@ -21,6 +23,8 @@ export const FONTES = {
 
 export function quantidadeServico(proj, s) {
   if (s.fonte === 'manual') return num(s.qtdManual) ?? 0;
+  if (s.fonte === 'paredeInterna') return totaisParedes(proj).interna;
+  if (s.fonte === 'paredeExterna') return totaisParedes(proj).externa;
   if (s.fonte?.startsWith('inst:')) return totaisInstalacoes(proj)[s.fonte.slice(5)] ?? 0;
   if (s.fonte in FONTES_REVESTIMENTO) return totaisRevestimento(proj)[s.fonte] ?? 0;
   let total = 0;

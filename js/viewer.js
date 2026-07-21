@@ -169,6 +169,19 @@ export function desenharOverlay() {
         class: 'medida-rotulo', x: fim.x + f * .4, y: fim.y - f * .4, 'font-size': f,
       }, `${m.nome} ${compM !== null ? fmt(compM) + ' m' : ''}`));
     }
+    if (m.tipo === 'parede' && m.pontos.length > 1) {
+      const cor = m.classe === 'externa' ? '#ef4444' : '#3b82f6';
+      overlay.appendChild(el('polyline', {
+        'stroke-width': traco * 2.4, stroke: cor, fill: 'none', 'stroke-linecap': 'round',
+        opacity: 0.75, points: m.pontos.map(p => `${p.x},${p.y}`).join(' '),
+      }));
+      const fim = m.pontos[m.pontos.length - 1];
+      const compM = metros(comprimentoPolilinha(m.pontos), prancha);
+      const areaM = compM !== null ? compM * (m.pd || 0) : null;
+      overlay.appendChild(el('text', {
+        class: 'medida-rotulo', x: fim.x + f * .4, y: fim.y - f * .4, 'font-size': f,
+      }, `${m.classe === 'externa' ? 'Ext' : 'Int'} ${areaM !== null ? fmt(areaM) + ' m²' : ''}`));
+    }
     if (m.tipo === 'contagem') {
       for (const p of m.pontos) {
         overlay.appendChild(el('circle', {

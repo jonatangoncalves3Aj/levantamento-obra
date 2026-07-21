@@ -128,7 +128,9 @@
           <button class="btn-tool" data-tool="perimetro">&#11040;<span>Per&iacute;metro</span></button>
           <button class="btn-tool" data-tool="linear">&#9585;<span>Linear</span></button>
           <button class="btn-tool" data-tool="contagem">&#9678;<span>Contagem</span></button>
+          <button class="btn-tool" data-tool="parede">&#9707;<span>Parede</span></button>
         </div>
+        <p class="dica">Parede: trace o trecho (Enter/2&times; clique p/ fechar), marque <strong>interna/externa</strong> e o p&eacute;-direito &mdash; a &aacute;rea &eacute; comprimento &times; PD.</p>
         <button id="btn-add-ambiente" class="btn-passo" data-tool="ambiente">+ Ambiente manual</button>
         <button id="btn-add-pendencia" class="btn-passo" data-tool="pendencia">&#9888;&#65039; + Pend&ecirc;ncia</button>
       </section>
@@ -150,7 +152,7 @@
 
       <section class="passo">
         <p class="dica">Atalhos: <strong>1&ndash;4</strong> ferramentas &middot; <strong>C</strong> calibrar &middot; <strong>A</strong> ambiente &middot; <strong>T</strong> planta/tabela &middot; <strong>N</strong> nomes &middot; <strong>+/&minus;</strong> zoom &middot; <strong>0</strong> ajustar &middot; <strong>Ctrl+Z</strong> desfazer &middot; <strong>Esc</strong> cancelar &middot; arraste para navegar.</p>
-        <p class="dica" id="versao-app">Vers&atilde;o 3.6.1 &middot; 21/07/2026</p>
+        <p class="dica" id="versao-app">Vers&atilde;o 3.7 &middot; 21/07/2026</p>
       </section>
     </aside>
   </main>
@@ -275,6 +277,23 @@
     <p class="dica">Depois de instalado, o app abre em tela cheia e funciona offline.</p>
     <div class="dlg-botoes">
       <button id="dlg-instalar-fechar" class="btn-laranja">Entendi</button>
+    </div>
+  </dialog>
+
+  <!-- Diálogo: parede interna/externa -->
+  <dialog id="dlg-parede">
+    <h3>&#9707; Parede</h3>
+    <p class="dica" id="dlg-parede-msg"></p>
+    <label class="campo-label" style="margin-top:8px">Tipo</label>
+    <select id="sel-parede-classe">
+      <option value="interna">Interna</option>
+      <option value="externa">Externa</option>
+    </select>
+    <label class="campo-label" style="margin-top:8px">P&eacute;-direito (m)</label>
+    <input id="inp-parede-pd" inputmode="decimal" placeholder="ex.: 2,80" />
+    <div class="dlg-botoes">
+      <button id="dlg-parede-cancelar" class="btn-ghost">Cancelar</button>
+      <button id="dlg-parede-ok" class="btn-laranja">Adicionar</button>
     </div>
   </dialog>
 

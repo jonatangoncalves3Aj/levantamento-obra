@@ -84,8 +84,12 @@ perimetro, pdOsso, pdAcab, vaos[], qtd, avanco, tipoInst?, pavimento? }`.
 `ambiente.pavimento` e `medicao.pavimento` são overrides opcionais (folha
 com vários pavimentos desenhados — ferramenta "Separar pavimentos"); o
 efetivo vem de `pavimentoDoAmbiente()`/`ambientesPorPavimento()` no store —
-**agrupe sempre por eles**, nunca direto por `prancha.pavimento`. Campos
-novos: adicione migração em `garantirCampos()` no store.
+**agrupe sempre por eles**, nunca direto por `prancha.pavimento`.
+Medições (`prancha.medicoes[]`) têm tipos `linear`, `contagem` e `parede`
+(`{tipo:'parede', classe:'interna'|'externa', pd, pontos[]}` — área =
+comprimento×PD, somada por `totaisParedes()` no store; fontes de orçamento
+`paredeInterna`/`paredeExterna`). `projeto.peDireitoPadrao` é o PD default.
+Campos novos: adicione migração em `garantirCampos()` no store.
 
 ## Integrações
 

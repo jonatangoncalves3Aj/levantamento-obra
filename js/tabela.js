@@ -1,6 +1,6 @@
 // Vista Tabela — quantitativos por pavimento, subtotais, CSV e impressão
 
-import { state, salvar, ordenarPavimentos, ambientesPorPavimento } from './store.js';
+import { state, salvar, ordenarPavimentos, ambientesPorPavimento, totaisParedes } from './store.js';
 import { calcAmbiente, fmt, num } from './calc.js';
 import { comprimentoPolilinha } from './calc.js';
 
@@ -130,7 +130,46 @@ export function renderTabela() {
   tabela.appendChild(tbody);
   scroll.appendChild(tabela);
 
+  renderParedes();
   renderMedicoesAvulsas();
+}
+
+// Resumo das paredes medidas (comprimento × PD), interna × externa
+function renderParedes() {
+  const t = totaisParedes(state.projeto);
+  if (!t.interna && !t.externa) return;
+
+  const h = document.createElement('h3');
+  h.className = 'tabela-sub';
+  h.textContent = 'Paredes medidas (comprimento × pé-direito)';
+  scroll.appendChild(h);
+
+  const tab = document.createElement('table');
+  tab.className = 'quant';
+  tab.style.minWidth = '0';
+  tab.style.maxWidth = '520px';
+  tab.innerHTML = '<thead><tr><th>Pavimento</th><th>Interna (m²)</th><th>Externa (m²)</th><th>Total (m²)</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  for (const pav of ordenarPavimentos(state.projeto, [...t.porPav.keys()])) {
+    const v = t.porPav.get(pav);
+    const tr = document.createElement('tr');
+    tr.appendChild(celTexto(pav));
+    tr.appendChild(celTexto(fmt(v.interna)));
+    tr.appendChild(celTexto(fmt(v.externa)));
+    tr.appendChild(celTexto(fmt(v.interna + v.externa)));
+    tr.querySelector('td').style.textAlign = 'left';
+    tb.appendChild(tr);
+  }
+  const tot = document.createElement('tr');
+  tot.className = 'total';
+  tot.appendChild(celTexto('Total'));
+  tot.appendChild(celTexto(fmt(t.interna)));
+  tot.appendChild(celTexto(fmt(t.externa)));
+  tot.appendChild(celTexto(fmt(t.interna + t.externa)));
+  tot.querySelector('td').style.textAlign = 'left';
+  tb.appendChild(tot);
+  tab.appendChild(tb);
+  scroll.appendChild(tab);
 }
 
 function renderMedicoesAvulsas() {
@@ -144,6 +183,11 @@ function renderMedicoesAvulsas() {
         linhas.push([pav, m.nome, 'Linear', compr !== null ? `${fmt(compr)} m` : '—']);
       } else if (m.tipo === 'contagem') {
         linhas.push([pav, m.nome, 'Contagem', `${m.pontos.length} un`]);
+      } else if (m.tipo === 'parede') {
+        const ppm = p.escala?.pxPorMetro;
+        const compr = ppm ? comprimentoPolilinha(m.pontos) / ppm : null;
+        const nome = `Parede ${m.classe === 'externa' ? 'externa' : 'interna'} (PD ${fmt(num(m.pd) ?? 0)})`;
+        linhas.push([pav, nome, 'Parede', compr !== null ? `${fmt(compr * (num(m.pd) ?? 0))} m²` : '—']);
       }
     }
   }

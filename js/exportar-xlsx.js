@@ -1,7 +1,7 @@
 // Exportação XLSX — pasta de trabalho com abas Quantitativos, Orçamento e Avanço
 // Usa SheetJS (vendor/xlsx.full.min.js, carregado como script global XLSX)
 
-import { state, ordenarPavimentos, ambientesPorPavimento } from './store.js';
+import { state, ordenarPavimentos, ambientesPorPavimento, totaisParedes } from './store.js';
 import { calcAmbiente, num } from './calc.js';
 import { FONTES, quantidadeServico } from './orcamento.js';
 import { avancoGlobal } from './avanco.js';
@@ -37,6 +37,20 @@ function abaQuantitativos(proj) {
     linhas.push([`Subtotal — ${pav}`, null, rd(sub.area), null, null, null, null,
       rd(sub.bruta), sub.vaos || null, rd(sub.desc), rd(sub.acab), rd(sub.liq), null]);
   }
+
+  // Paredes medidas (comprimento × PD) — interna × externa
+  const par = totaisParedes(proj);
+  if (par.interna || par.externa) {
+    linhas.push([]);
+    linhas.push(['PAREDES MEDIDAS (comprimento × pé-direito)']);
+    linhas.push(['Pavimento', 'Interna (m²)', 'Externa (m²)', 'Total (m²)']);
+    for (const pav of ordenarPavimentos(proj, [...par.porPav.keys()])) {
+      const v = par.porPav.get(pav);
+      linhas.push([pav, rd(v.interna), rd(v.externa), rd(v.interna + v.externa)]);
+    }
+    linhas.push(['Total', rd(par.interna), rd(par.externa), rd(par.interna + par.externa)]);
+  }
+
   const ws = XLSX.utils.aoa_to_sheet(linhas);
   ws['!cols'] = [{ wch: 18 }, { wch: 26 }, ...Array(11).fill({ wch: 13 })];
   return ws;

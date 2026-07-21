@@ -24,7 +24,7 @@ import {
 } from './ia.js';
 import { renderInstalacoes, enviarParaOrcamento } from './instalacoes.js';
 import { renderTabela, exportarCSV } from './tabela.js';
-import { fmt, num, dist, perimetroPoligono, areaPoligono, pxPorMetroDeEscala } from './calc.js';
+import { fmt, num, dist, comprimentoPolilinha, perimetroPoligono, areaPoligono, pxPorMetroDeEscala } from './calc.js';
 
 const $ = (id) => document.getElementById(id);
 const overlay = $('overlay');
@@ -464,7 +464,7 @@ botoesTool.forEach(b => b.addEventListener('click', () => {
   const t = b.dataset.tool;
   const p = pranchaAtual();
   if (!p) return alert('Abra uma prancha primeiro.');
-  if (['lado', 'perimetro', 'linear'].includes(t) && !p.escala) {
+  if (['lado', 'perimetro', 'linear', 'parede'].includes(t) && !p.escala) {
     return alert('Para medir em metros, defina a escala primeiro (passo 1):\n\n' +
       '• "Calibrar escala": clique nos DOIS extremos de uma cota conhecida da planta e informe o valor real; ou\n' +
       '• "Pela escala do carimbo": informe o 1:N da prancha.');
@@ -517,7 +517,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 overlay.addEventListener('dblclick', (e) => {
-  if (state.desenho && ['perimetro', 'linear'].includes(state.tool)) {
+  if (state.desenho && ['perimetro', 'linear', 'parede'].includes(state.tool)) {
     e.preventDefault();
     finalizarDesenho();
   }
@@ -610,7 +610,7 @@ overlay.addEventListener('click', (e) => {
   // Snap ortogonal: quase-horizontal/vertical em relação ao ponto anterior
   // (ou sempre, com Shift pressionado)
   const ant = state.desenho.pontos[state.desenho.pontos.length - 1];
-  if (ant && ['perimetro', 'linear', 'calibrar'].includes(state.tool)) {
+  if (ant && ['perimetro', 'linear', 'calibrar', 'parede'].includes(state.tool)) {
     const dx = pt.x - ant.x, dy = pt.y - ant.y;
     const forcar = e.shiftKey;
     if (Math.abs(dy) < (forcar ? Math.abs(dx) : Math.abs(dx) * 0.12)) pt.y = ant.y;
@@ -785,6 +785,33 @@ function finalizarDesenho() {
     setTool(null);
     salvar(); renderSidebar(); desenharOverlay();
   }
+
+  if (state.tool === 'parede') {
+    if (pts.length < 2) return;
+    abrirParede(pts);
+  }
+}
+
+// Adiciona um trecho de parede (comprimento medido × pé-direito), classificado
+// como interna ou externa. Área = comprimento × PD.
+function abrirParede(pts) {
+  const p = pranchaAtual();
+  const compr = comprimentoPolilinha(pts) / p.escala.pxPorMetro;
+  $('dlg-parede-msg').textContent = `Trecho traçado: ${fmt(compr)} m de comprimento.`;
+  $('inp-parede-pd').value = String(num(state.projeto.peDireitoPadrao) ?? 2.8).replace('.', ',');
+  const dlg = $('dlg-parede');
+  dlg.showModal();
+  $('dlg-parede-ok').onclick = () => {
+    const pd = num($('inp-parede-pd').value);
+    if (!pd || pd <= 0) return;
+    dlg.close();
+    const classe = $('sel-parede-classe').value === 'externa' ? 'externa' : 'interna';
+    state.projeto.peDireitoPadrao = pd;   // memoriza para os próximos trechos
+    p.medicoes.push({ id: uid(), tipo: 'parede', classe, pd, pontos: pts });
+    setTool(null);
+    salvar(); atualizarTudo();
+  };
+  $('dlg-parede-cancelar').onclick = () => { dlg.close(); cancelarDesenho(); setTool(null); };
 }
 
 /* =============== Sidebar: cards de ambientes e medições =============== */
@@ -853,16 +880,17 @@ function renderSidebar() {
     for (const m of p.medicoes) {
       const linha = document.createElement('div');
       linha.className = 'medicao-linha';
-      let valor = '';
-      if (m.tipo === 'contagem') valor = `${m.pontos.length} un`;
-      else if (p.escala) {
-        let c = 0;
-        for (let i = 1; i < m.pontos.length; i++) c += dist(m.pontos[i - 1], m.pontos[i]);
-        valor = `${fmt(c / p.escala.pxPorMetro)} m`;
-      }
+      const compr = p.escala && m.pontos.length > 1
+        ? comprimentoPolilinha(m.pontos) / p.escala.pxPorMetro : null;
+      let icone = '╱', nome = m.nome, valor = '';
+      if (m.tipo === 'contagem') { icone = '⌾'; valor = `${m.pontos.length} un`; }
+      else if (m.tipo === 'parede') {
+        icone = '▮';
+        nome = `Parede ${m.classe === 'externa' ? 'externa' : 'interna'}`;
+        valor = compr !== null ? `${fmt(compr * (num(m.pd) ?? 0))} m² (${fmt(compr)}×${fmt(num(m.pd) ?? 0)})` : '';
+      } else if (compr !== null) valor = `${fmt(compr)} m`;
       const rotuloMed = document.createElement('span');
-      rotuloMed.textContent = `${m.tipo === 'contagem' ? '⌾' : '╱'} ${m.nome}` +
-        (m.pavimento ? ` · ${m.pavimento}` : '');
+      rotuloMed.textContent = `${icone} ${nome}` + (m.pavimento ? ` · ${m.pavimento}` : '');
       const valorMed = document.createElement('strong');
       valorMed.textContent = valor;
       linha.append(rotuloMed, valorMed);

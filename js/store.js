@@ -1,5 +1,7 @@
 // Estado do levantamento + persistência (localStorage p/ dados, IndexedDB p/ PDFs)
 
+import { num, comprimentoPolilinha } from './calc.js';
+
 export const state = {
   projeto: null,
   pranchaAtualId: null,
@@ -39,7 +41,7 @@ export function novoProjeto(nome = 'Levantamento') {
   return {
     id: uid(), nome, criadoEm: new Date().toISOString(), pranchas: [],
     pavimentos: [...PAVIMENTOS_PADRAO],
-    catalogo: catalogoPadrao(), bdi: 25,
+    catalogo: catalogoPadrao(), bdi: 25, peDireitoPadrao: 2.8,
     dataInicio: null, dataFim: null, snapshots: [], rdos: [],
   };
 }
@@ -48,6 +50,7 @@ export function novoProjeto(nome = 'Levantamento') {
 export function garantirCampos(proj) {
   proj.catalogo ??= catalogoPadrao();
   proj.bdi ??= 25;
+  proj.peDireitoPadrao ??= 2.8;
   proj.dataInicio ??= null;
   proj.dataFim ??= null;
   proj.snapshots ??= [];
@@ -84,6 +87,28 @@ export function ambientesPorPavimento(proj) {
     }
   }
   return m;
+}
+
+// Áreas de parede (comprimento medido × pé-direito) somadas por classe
+// (interna/externa) e por pavimento. Fonte: medições tipo 'parede'.
+export function totaisParedes(proj) {
+  const t = { interna: 0, externa: 0, porPav: new Map() };
+  for (const p of proj.pranchas) {
+    const ppm = p.escala?.pxPorMetro;
+    if (!ppm) continue;
+    for (const m of p.medicoes) {
+      if (m.tipo !== 'parede' || m.pontos.length < 2) continue;
+      const comprimento = comprimentoPolilinha(m.pontos) / ppm;
+      const pd = num(m.pd) ?? 0;
+      const area = comprimento * pd;
+      const classe = m.classe === 'externa' ? 'externa' : 'interna';
+      t[classe] += area;
+      const pav = m.pavimento || p.pavimento;
+      if (!t.porPav.has(pav)) t.porPav.set(pav, { interna: 0, externa: 0 });
+      t.porPav.get(pav)[classe] += area;
+    }
+  }
+  return t;
 }
 
 // Ordena nomes de pavimento pela ordem definida no projeto (desconhecidos ao fim)
