@@ -373,7 +373,7 @@ async function analisarSimbolosPorVisao(p) {
   res.textContent = `🤖 Contando símbolos de ${p.disciplina.toLowerCase()} com IA — pode levar até 1 minuto…`;
   try {
     const { page, largura, altura } = await obterPagina(p);
-    const itens = await analisarSimbolosIA(page, largura, altura, p.disciplina);
+    const { legenda, itens } = await analisarSimbolosIA(page, largura, altura, p.disciplina);
     if (!itens.length) {
       res.textContent = 'A IA não encontrou símbolos de instalação nesta prancha.';
       return;
@@ -388,9 +388,11 @@ async function analisarSimbolosPorVisao(p) {
       const nome = `${rotulo} (IA)`;
       p.medicoes = p.medicoes.filter(m => m.nome !== nome); // reanálise substitui
       p.medicoes.push({ id: uid(), tipo: 'contagem', nome, pontos });
-      resumo.push(`${pontos.length} ${rotulo.toLowerCase()}`);
+      resumo.push(`${pontos.length}× ${rotulo}`);
     }
-    res.textContent = `🤖 A IA contou: ${resumo.join(', ')}. Criei medições de contagem com pins na planta — confira os pontos e ajuste o que faltar. Elas aparecem na Tabela (medições avulsas) e podem alimentar o orçamento.`;
+    res.textContent = (legenda.length ? `🤖 Legenda lida (${legenda.length} itens). ` : '🤖 ') +
+      `Contagem: ${resumo.join(' · ')}. Criei medições de contagem com pins na planta — confira e ajuste. ` +
+      'Elas entram na Tabela (medições avulsas) e na aba Instalações do XLSX.';
     salvar(); atualizarTudo();
   } catch (err) {
     res.textContent = 'Falha na análise por IA: ' + err.message;
@@ -400,6 +402,7 @@ async function analisarSimbolosPorVisao(p) {
 $('btn-analisar-ia').addEventListener('click', analisarPorVisao);
 $('lnk-ia-chave').addEventListener('click', (e) => { e.preventDefault(); abrirConfigIA(); });
 
+$('btn-inst-xlsx').addEventListener('click', exportarXLSX);
 $('btn-inst-orcamento').addEventListener('click', () => {
   const novos = enviarParaOrcamento();
   alert(novos

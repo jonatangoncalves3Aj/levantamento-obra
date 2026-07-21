@@ -1,5 +1,5 @@
 // Service Worker — Levantamento de Obra
-const CACHE = 'levantamento-v8';
+const CACHE = 'levantamento-v9';
 const ASSETS = [
   './',
   './index.html',

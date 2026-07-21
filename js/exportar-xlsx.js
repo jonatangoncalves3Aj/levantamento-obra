@@ -5,6 +5,10 @@ import { state, ordenarPavimentos } from './store.js';
 import { calcAmbiente, num } from './calc.js';
 import { FONTES, quantidadeServico } from './orcamento.js';
 import { avancoGlobal } from './avanco.js';
+import {
+  ITENS_INSTALACAO, TIPOS_AMBIENTE, classificarAmbiente, regrasAmbiente,
+  totaisInstalacoes, totaisRevestimento,
+} from './instalacoes.js';
 
 const rd = (v, casas = 2) => (v === null || v === undefined ? null : +(+v).toFixed(casas));
 
@@ -97,11 +101,60 @@ function abaAvanco(proj) {
   return ws;
 }
 
+function abaInstalacoes(proj) {
+  const chaves = Object.keys(ITENS_INSTALACAO);
+  const linhas = [['CONTAGENS NAS PRANCHAS (pela legenda da planta — IA e manuais)']];
+  linhas.push(['Pavimento', 'Disciplina', 'Item', 'Quantidade']);
+  let temContagem = false;
+  for (const p of proj.pranchas) {
+    for (const m of p.medicoes) {
+      if (m.tipo !== 'contagem') continue;
+      temContagem = true;
+      linhas.push([p.pavimento, p.disciplina, m.nome, m.pontos.length]);
+    }
+  }
+  if (!temContagem) {
+    linhas.push(['(nenhuma contagem ainda — use a IA na prancha de Elétrica/Hidráulica ou a ferramenta Contagem)']);
+  }
+
+  linhas.push([]);
+  linhas.push(['ESTIMATIVA PARAMÉTRICA (pelos ambientes levantados)']);
+  linhas.push(['Pavimento', 'Ambiente', 'Tipo', ...Object.values(ITENS_INSTALACAO), 'Qtd.']);
+  const porPav = new Map();
+  for (const p of proj.pranchas) {
+    if (!porPav.has(p.pavimento)) porPav.set(p.pavimento, []);
+    porPav.get(p.pavimento).push(...p.ambientes);
+  }
+  for (const pav of ordenarPavimentos(proj, [...porPav.keys()])) {
+    for (const a of porPav.get(pav)) {
+      const tipo = classificarAmbiente(a);
+      const q = regrasAmbiente(a, tipo);
+      linhas.push([pav, a.nome, TIPOS_AMBIENTE[tipo],
+        ...chaves.map(k => q[k] || null), num(a.qtd) ?? 1]);
+    }
+  }
+  const tot = totaisInstalacoes(proj);
+  linhas.push(['Total', null, null, ...chaves.map(k => tot[k] || null), null]);
+
+  linhas.push([]);
+  linhas.push(['REVESTIMENTOS POR TIPO DE ÁREA']);
+  const rev = totaisRevestimento(proj);
+  linhas.push(['Piso — áreas molhadas (cerâmica)', 'm²', rd(rev.pisoMolhado)]);
+  linhas.push(['Piso — áreas secas', 'm²', rd(rev.pisoSeco)]);
+  linhas.push(['Parede — áreas molhadas (azulejo)', 'm²', rd(rev.paredeMolhada)]);
+  linhas.push(['Parede — áreas secas (pintura)', 'm²', rd(rev.paredeSeca)]);
+
+  const ws = XLSX.utils.aoa_to_sheet(linhas);
+  ws['!cols'] = [{ wch: 30 }, { wch: 24 }, { wch: 16 }, ...Array(chaves.length).fill({ wch: 12 })];
+  return ws;
+}
+
 export function exportarXLSX() {
   const proj = state.projeto;
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, abaQuantitativos(proj), 'Quantitativos');
   XLSX.utils.book_append_sheet(wb, abaOrcamento(proj), 'Orçamento');
+  XLSX.utils.book_append_sheet(wb, abaInstalacoes(proj), 'Instalações');
   XLSX.utils.book_append_sheet(wb, abaAvanco(proj), 'Avanço');
   XLSX.writeFile(wb, `${proj.nome.toLowerCase().replace(/\s+/g, '-')}-levantamento.xlsx`);
 }

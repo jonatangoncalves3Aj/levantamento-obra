@@ -113,70 +113,76 @@ export async function analisarComIA(page, larguraBase, alturaBase) {
     }));
 }
 
-/* ---------- Contagem de símbolos (pranchas de instalações) ---------- */
+/* ---------- Contagem de símbolos pela LEGENDA (pranchas de instalações) ---------- */
 
-const TIPOS_SIMBOLOS = {
-  'Elétrica': [
-    { id: 'ponto_luz', rotulo: 'Pontos de luz' },
-    { id: 'tomada', rotulo: 'Tomadas' },
-    { id: 'interruptor', rotulo: 'Interruptores' },
-    { id: 'quadro', rotulo: 'Quadros (QDC)' },
-  ],
-  'Hidráulica': [
-    { id: 'agua_fria', rotulo: 'Pontos de água fria' },
-    { id: 'agua_quente', rotulo: 'Pontos de água quente' },
-    { id: 'esgoto', rotulo: 'Pontos de esgoto' },
-    { id: 'ralo', rotulo: 'Ralos' },
-    { id: 'registro', rotulo: 'Registros' },
-  ],
+const DISCIPLINAS_SIMBOLOS = {
+  'Elétrica': 'elétricas (tomadas, interruptores, pontos de luz, quadros)',
+  'Hidráulica': 'hidrossanitárias (pontos de água fria/quente, esgoto, ralos, registros, louças)',
+  'Climatização': 'de climatização (evaporadoras, condensadoras, grelhas, dutos)',
 };
 
 export function disciplinaTemSimbolos(disciplina) {
-  return !!TIPOS_SIMBOLOS[disciplina];
+  return disciplina in DISCIPLINAS_SIMBOLOS;
 }
 
-// Retorna itens [{tipo, rotulo, x, y}] com x/y em coordenadas base do PDF
+// Lê a legenda da prancha e conta cada ocorrência de cada símbolo.
+// Retorna { legenda: [nomes], itens: [{rotulo, x, y}] } em coordenadas base.
 export async function analisarSimbolosIA(page, larguraBase, alturaBase, disciplina) {
-  const tipos = TIPOS_SIMBOLOS[disciplina];
-  if (!tipos) throw new Error('Sem análise de símbolos para esta disciplina.');
+  const contexto = DISCIPLINAS_SIMBOLOS[disciplina];
+  if (!contexto) throw new Error('Sem análise de símbolos para esta disciplina.');
 
   const esquema = {
     type: 'object',
     properties: {
+      legenda: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            item: { type: 'string', description: 'Nome do item exatamente como escrito na legenda da prancha' },
+          },
+          required: ['item'],
+          additionalProperties: false,
+        },
+      },
       itens: {
         type: 'array',
         items: {
           type: 'object',
           properties: {
-            tipo: { type: 'string', enum: tipos.map(t => t.id) },
+            item: { type: 'string', description: 'Nome do item — igual ao da legenda, quando houver legenda' },
             x: { type: 'number', description: 'Centro do símbolo, fração 0 a 1 da largura' },
             y: { type: 'number', description: 'Centro do símbolo, fração 0 a 1 da altura (0 = topo)' },
           },
-          required: ['tipo', 'x', 'y'],
+          required: ['item', 'x', 'y'],
           additionalProperties: false,
         },
       },
     },
-    required: ['itens'],
+    required: ['legenda', 'itens'],
     additionalProperties: false,
   };
 
-  const nomeDisc = disciplina === 'Elétrica' ? 'elétricas' : 'hidrossanitárias';
   const png = await paginaParaPNG(page);
-  const { itens } = await chamarIA(
+  const dados = await chamarIA(
     esquema,
-    `Você analisa plantas de instalações ${nomeDisc} brasileiras. Localize CADA símbolo de instalação desenhado na planta e retorne um item por símbolo, com o centro em frações 0–1 da imagem. Tipos possíveis: ${tipos.map(t => `${t.id} = ${t.rotulo}`).join('; ')}. Conte cada ocorrência separadamente. Ignore carimbo, legenda, notas e cotas — apenas os símbolos na área desenhada da planta.`,
-    'Localize e liste todos os símbolos de instalação desta prancha.',
+    `Você analisa plantas de instalações ${contexto} brasileiras.\n` +
+    '1) Primeiro localize a LEGENDA (quadro de símbolos/convenções) da prancha e liste cada item com o nome EXATAMENTE como escrito nela.\n' +
+    '2) Depois localize CADA ocorrência de cada símbolo na área desenhada da planta — um item por ocorrência, com o centro em frações 0–1 da imagem, usando o MESMO nome da legenda.\n' +
+    'Se a prancha não tiver legenda, retorne legenda vazia e use nomes curtos e descritivos (ex.: "Tomada baixa", "Ponto de luz no teto").\n' +
+    'Não conte os símbolos desenhados dentro da própria legenda; ignore carimbo, notas e cotas.',
+    'Leia a legenda e conte todos os símbolos de instalação desta prancha.',
     png,
   );
 
-  const rotuloPor = Object.fromEntries(tipos.map(t => [t.id, t.rotulo]));
-  return itens
-    .filter(i => rotuloPor[i.tipo] && i.x >= 0 && i.x <= 1 && i.y >= 0 && i.y <= 1)
-    .map(i => ({
-      tipo: i.tipo,
-      rotulo: rotuloPor[i.tipo],
-      x: i.x * larguraBase,
-      y: i.y * alturaBase,
-    }));
+  return {
+    legenda: (dados.legenda || []).map(l => l.item?.trim()).filter(Boolean),
+    itens: (dados.itens || [])
+      .filter(i => i.item && i.x >= 0 && i.x <= 1 && i.y >= 0 && i.y <= 1)
+      .map(i => ({
+        rotulo: i.item.trim(),
+        x: i.x * larguraBase,
+        y: i.y * alturaBase,
+      })),
+  };
 }
