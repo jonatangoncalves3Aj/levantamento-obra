@@ -469,12 +469,6 @@ botoesTool.forEach(b => b.addEventListener('click', () => {
       '• "Calibrar escala": clique nos DOIS extremos de uma cota conhecida da planta e informe o valor real; ou\n' +
       '• "Pela escala do carimbo": informe o 1:N da prancha.');
   }
-  if (['lado', 'perimetro'].includes(t) && !ambienteSel()) {
-    return alert('Antes de medir, selecione QUAL ambiente receberá a medida:\n\n' +
-      '• clique no pin azul dele na planta, ou no card à direita;\n' +
-      '• se ainda não há ambientes, crie um com "+ Ambiente manual" (tecla A) clicando no centro do cômodo — ou use Analisar planta / IA.\n\n' +
-      'Com o ambiente selecionado, ative a ferramenta e clique nos pontos na planta.');
-  }
   setTool(t);
 }));
 
@@ -644,7 +638,7 @@ function abrirZonaPavimento() {
   const pontosContagem = p.medicoes.reduce((n, m) =>
     n + (m.tipo === 'contagem' ? m.pontos.filter(dentroPt).length : 0), 0);
   if (!dentro.length && !pontosContagem) {
-    alert('Nada dentro da região marcada — marque os dois cantos opostos em volta da planta desejada (os pins precisam ficar dentro).');
+    alert('Nada dentro da região marcada.\n\nPrimeiro crie os ambientes (meça com Lado/Perímetro ou use Analisar planta / IA); depois marque os dois cantos opostos em volta da planta do outro pavimento — os pins precisam ficar dentro da região.');
     setTool(null);
     return;
   }
@@ -728,10 +722,25 @@ function abrirCalibrar() {
   $('dlg-calibrar-cancelar').onclick = () => { dlg.close(); cancelarDesenho(); };
 }
 
+// Ambiente que vai receber a medida: o selecionado, ou um novo criado na
+// hora (medir primeiro, nomear depois) — o pin nasce no centro do desenho.
+// Não fixa a seleção no novo ambiente, para que medições em sequência criem
+// cada uma o seu (só medições com um ambiente já selecionado vão para ele).
+function ambienteParaMedida(centro) {
+  const jaSel = ambienteSel();
+  if (jaSel) return jaSel;
+  const nome = prompt('Nome do ambiente que você está medindo:', 'Ambiente');
+  if (nome === null) return null;              // cancelou
+  const amb = novoAmbiente((nome.trim() || 'Ambiente').toUpperCase(), centro.x, centro.y);
+  pranchaAtual().ambientes.push(amb);
+  return amb;
+}
+
 function medirLado() {
   const p = pranchaAtual();
-  const amb = ambienteSel();
   const [a, b] = state.desenho.pontos;
+  const amb = ambienteParaMedida({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+  if (!amb) { setTool(null); return; }
   const ppm = p.escala.pxPorMetro;
   const w = Math.abs(b.x - a.x) / ppm;
   const h = Math.abs(b.y - a.y) / ppm;
@@ -742,7 +751,7 @@ function medirLado() {
     amb.areaOrigem = 'medida';
   }
   setTool(null);
-  salvar(); renderSidebar(); desenharOverlay();
+  salvar(); atualizarTudo();
 }
 
 function finalizarDesenho() {
@@ -751,7 +760,12 @@ function finalizarDesenho() {
 
   if (state.tool === 'perimetro') {
     if (pts.length < 3) return alert('Marque pelo menos 3 pontos do contorno.');
-    const amb = ambienteSel();
+    const centro = {
+      x: pts.reduce((s, q) => s + q.x, 0) / pts.length,
+      y: pts.reduce((s, q) => s + q.y, 0) / pts.length,
+    };
+    const amb = ambienteParaMedida(centro);
+    if (!amb) { setTool(null); return; }
     const ppm = p.escala.pxPorMetro;
     amb.perimetro = +(perimetroPoligono(pts) / ppm).toFixed(2);
     amb.poligono = pts;
@@ -760,7 +774,7 @@ function finalizarDesenho() {
       amb.areaOrigem = 'medida';
     }
     setTool(null);
-    salvar(); renderSidebar(); desenharOverlay();
+    salvar(); atualizarTudo();
     return;
   }
 
