@@ -462,10 +462,15 @@ botoesTool.forEach(b => b.addEventListener('click', () => {
   const p = pranchaAtual();
   if (!p) return alert('Abra uma prancha primeiro.');
   if (['lado', 'perimetro', 'linear'].includes(t) && !p.escala) {
-    return alert('Defina a escala primeiro (passo 1) para medir em metros.');
+    return alert('Para medir em metros, defina a escala primeiro (passo 1):\n\n' +
+      '• "Calibrar escala": clique nos DOIS extremos de uma cota conhecida da planta e informe o valor real; ou\n' +
+      '• "Pela escala do carimbo": informe o 1:N da prancha.');
   }
   if (['lado', 'perimetro'].includes(t) && !ambienteSel()) {
-    return alert('Selecione um ambiente (clique no card ou no pin) antes de medir.');
+    return alert('Antes de medir, selecione QUAL ambiente receberá a medida:\n\n' +
+      '• clique no pin azul dele na planta, ou no card à direita;\n' +
+      '• se ainda não há ambientes, crie um com "+ Ambiente manual" (tecla A) clicando no centro do cômodo — ou use Analisar planta / IA.\n\n' +
+      'Com o ambiente selecionado, ative a ferramenta e clique nos pontos na planta.');
   }
   setTool(t);
 }));

@@ -13,20 +13,40 @@ function pareceNome(s) {
   if (t.length < 3 || t.length > 42) return false;
   if (RE_AREA.test(t) || RE_PD.test(t)) return false;
   if (/\d{2,}/.test(t)) return false;                       // cotas, códigos
-  const letras = (t.match(/[A-ZÀ-ÜÇ]/g) || []).length;
-  return letras >= 3 && t === t.toUpperCase() && /^[A-ZÀ-ÜÇ0-9 .ºª'|\/\-–&()]+$/.test(t);
+  const T = t.toUpperCase();
+  const letras = (T.match(/[A-ZÀ-ÜÇ]/g) || []).length;
+  const caixaOk = t === T || /^[A-ZÀ-ÜÇ]/.test(t);         // MAIÚSCULAS ou Título
+  return letras >= 3 && caixaOk && /^[A-ZÀ-ÜÇ0-9 .ºª'|\/\-–&()]+$/.test(T);
 }
 
 export async function analisarPlanta(page) {
   const vp = page.getViewport({ scale: 1 });
   const conteudo = await page.getTextContent();
 
-  const tokens = conteudo.items
+  const brutos = conteudo.items
     .filter(it => it.str && it.str.trim())
     .map(it => {
       const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]);
-      return { str: it.str.trim(), x, y, largura: it.width || 0 };
+      const alt = Math.hypot(it.transform[2], it.transform[3]) || 10;
+      return { str: it.str, x, y, largura: it.width || 0, alt };
     });
+
+  // Muitos CADs exportam "24,75 m²" fatiado em pedaços ("24,75" + "m²").
+  // Junta pedaços na mesma linha (mesmo y, próximos em x) num token só.
+  brutos.sort((a, b) => (a.y - b.y) || (a.x - b.x));
+  const tokens = [];
+  for (const t of brutos) {
+    const ult = tokens[tokens.length - 1];
+    const vao = ult ? t.x - (ult.x + ult.largura) : Infinity;
+    if (ult && Math.abs(t.y - ult.y) < Math.max(2, ult.alt * 0.35) &&
+        vao < ult.alt * 1.2 && vao > -ult.alt) {
+      ult.str += (vao > ult.alt * 0.15 ? ' ' : '') + t.str;
+      ult.largura = t.x + t.largura - ult.x;
+    } else {
+      tokens.push({ ...t });
+    }
+  }
+  for (const t of tokens) t.str = t.str.trim();
 
   const ambientes = [];
   const nomesUsados = new Set();
@@ -67,7 +87,7 @@ export async function analisarPlanta(page) {
     if (nomesUsados.has(chave)) continue;
     nomesUsados.add(chave);
 
-    ambientes.push({ nome, area, pd, x: tk.x + tk.largura / 2, y: tk.y - 6 });
+    ambientes.push({ nome: nome.toUpperCase(), area, pd, x: tk.x + tk.largura / 2, y: tk.y - 6 });
   }
 
   return ambientes;
