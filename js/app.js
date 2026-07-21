@@ -501,6 +501,13 @@ document.addEventListener('keydown', (e) => {
 
   if (digitando(e) || e.ctrlKey || e.metaKey || e.altKey) return;
 
+  // Excluir o ambiente selecionado (selecione pelo card ou pelo pin na planta)
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    const amb = ambienteSel();
+    if (amb) { e.preventDefault(); excluirAmbiente(pranchaAtual(), amb); }
+    return;
+  }
+
   // Atalhos de uma tecla
   const atalhos = {
     '1': 'lado', '2': 'perimetro', '3': 'linear', '4': 'contagem',
@@ -970,6 +977,21 @@ function campoNum(rotulo, valor, aoMudar) {
   return wrap;
 }
 
+function excluirAmbiente(p, a, confirmar = true) {
+  if (confirmar && !confirm(`Excluir o ambiente "${a.nome}" e suas medidas?`)) return false;
+  p.ambientes = p.ambientes.filter(x => x.id !== a.id);
+  if (state.ambienteSelId === a.id) state.ambienteSelId = null;
+  salvar(); atualizarTudo();
+  return true;
+}
+
+// Zera a medida (área/lados/perímetro) mantendo o ambiente, para remedir
+function limparMedidaAmbiente(a) {
+  a.area = null; a.areaOrigem = null;
+  a.lado = ''; a.perimetro = null; a.poligono = null;
+  salvar(); atualizarTudo();
+}
+
 function cardAmbiente(p, a) {
   const card = document.createElement('div');
   card.className = 'card' + (a.id === state.ambienteSelId ? ' selecionado' : '');
@@ -988,12 +1010,7 @@ function cardAmbiente(p, a) {
   const del = document.createElement('button');
   del.innerHTML = '&times;';
   del.title = 'Excluir ambiente';
-  del.addEventListener('click', () => {
-    if (!confirm(`Excluir o ambiente "${a.nome}"?`)) return;
-    p.ambientes = p.ambientes.filter(x => x.id !== a.id);
-    if (state.ambienteSelId === a.id) state.ambienteSelId = null;
-    salvar(); atualizarTudo();
-  });
+  del.addEventListener('click', () => excluirAmbiente(p, a));
   topo.appendChild(nome); topo.appendChild(del);
   card.appendChild(topo);
 
@@ -1094,6 +1111,26 @@ function cardAmbiente(p, a) {
   regra.textContent = 'Porta/correr desconta sempre — janela só desconta se > 2,00 m².';
   vaos.appendChild(regra);
   card.appendChild(vaos);
+
+  // Ações do ambiente: remedir (limpar medida) e excluir
+  const acoes = document.createElement('div');
+  acoes.className = 'card-acoes';
+  const btnLimpar = document.createElement('button');
+  btnLimpar.className = 'btn-mini';
+  btnLimpar.textContent = '↺ Limpar medida';
+  btnLimpar.title = 'Zera área, lado e perímetro para medir de novo (mantém o ambiente)';
+  btnLimpar.addEventListener('click', () => {
+    if (num(a.area) === null && !a.perimetro && !a.lado) return;
+    if (!confirm(`Limpar a medida de "${a.nome}"? O ambiente continua; só a área/lado/perímetro são zerados para você medir de novo.`)) return;
+    limparMedidaAmbiente(a);
+  });
+  const btnExcluir = document.createElement('button');
+  btnExcluir.className = 'btn-mini btn-excluir-amb';
+  btnExcluir.textContent = '🗑 Excluir ambiente';
+  btnExcluir.addEventListener('click', () => excluirAmbiente(p, a));
+  acoes.appendChild(btnLimpar);
+  acoes.appendChild(btnExcluir);
+  card.appendChild(acoes);
 
   return card;
 }
