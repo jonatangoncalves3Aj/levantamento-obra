@@ -3,6 +3,9 @@
 
 import { state, uid, salvar } from './store.js';
 import { calcAmbiente, fmt, num } from './calc.js';
+import {
+  ITENS_INSTALACAO, totaisInstalacoes, totaisRevestimento, FONTES_REVESTIMENTO,
+} from './instalacoes.js';
 
 const scroll = document.getElementById('orc-scroll');
 
@@ -11,11 +14,15 @@ export const FONTES = {
   areaPiso: 'Área de piso (m²)',
   areaTeto: 'Área de teto (m²)',
   perimetro: 'Perímetro/rodapé (m)',
+  ...FONTES_REVESTIMENTO,
+  ...Object.fromEntries(Object.entries(ITENS_INSTALACAO).map(([k, v]) => [`inst:${k}`, `${v} (un)`])),
   manual: 'Manual',
 };
 
 export function quantidadeServico(proj, s) {
   if (s.fonte === 'manual') return num(s.qtdManual) ?? 0;
+  if (s.fonte?.startsWith('inst:')) return totaisInstalacoes(proj)[s.fonte.slice(5)] ?? 0;
+  if (s.fonte in FONTES_REVESTIMENTO) return totaisRevestimento(proj)[s.fonte] ?? 0;
   let total = 0;
   for (const prancha of proj.pranchas) {
     for (const a of prancha.ambientes) {

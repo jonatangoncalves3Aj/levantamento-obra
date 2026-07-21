@@ -18,7 +18,11 @@ import {
   obterPagina, esquecerPagina, contarPaginas,
 } from './viewer.js';
 import { analisarPlanta, detectarEscalaCarimbo } from './deteccao.js';
-import { analisarComIA, iaConfigurada, lerChaveIA, salvarChaveIA } from './ia.js';
+import {
+  analisarComIA, analisarSimbolosIA, disciplinaTemSimbolos,
+  iaConfigurada, lerChaveIA, salvarChaveIA,
+} from './ia.js';
+import { renderInstalacoes, enviarParaOrcamento } from './instalacoes.js';
 import { renderTabela, exportarCSV } from './tabela.js';
 import { fmt, num, dist, perimetroPoligono, areaPoligono, pxPorMetroDeEscala } from './calc.js';
 
@@ -42,6 +46,7 @@ function atualizarTudo() {
   renderizar().catch(err => console.error(err));
   if (state.view === 'tabela') renderTabela();
   if (state.view === 'orcamento') renderOrcamento();
+  if (state.view === 'instalacoes') renderInstalacoes();
   if (state.view === 'avanco') renderAvanco();
   if (state.view === 'rdo') renderRDO();
 }
@@ -336,6 +341,8 @@ async function analisarPorVisao() {
   const p = pranchaAtual();
   if (!p) return alert('Abra uma prancha primeiro.');
   if (!iaConfigurada()) return abrirConfigIA(analisarPorVisao);
+  // Prancha de instalações: a IA conta os símbolos em vez de ler ambientes
+  if (disciplinaTemSimbolos(p.disciplina)) return analisarSimbolosPorVisao(p);
   const res = $('resultado-analise');
   res.hidden = false;
   res.textContent = '🤖 Analisando a planta com IA (visão) — pode levar até 1 minuto…';
@@ -358,8 +365,48 @@ async function analisarPorVisao() {
   }
 }
 
+// Conta símbolos (tomadas, pontos de luz, água, esgoto…) em pranchas de
+// Elétrica/Hidráulica e cria uma medição de contagem por tipo, com pins.
+async function analisarSimbolosPorVisao(p) {
+  const res = $('resultado-analise');
+  res.hidden = false;
+  res.textContent = `🤖 Contando símbolos de ${p.disciplina.toLowerCase()} com IA — pode levar até 1 minuto…`;
+  try {
+    const { page, largura, altura } = await obterPagina(p);
+    const itens = await analisarSimbolosIA(page, largura, altura, p.disciplina);
+    if (!itens.length) {
+      res.textContent = 'A IA não encontrou símbolos de instalação nesta prancha.';
+      return;
+    }
+    const porTipo = new Map();
+    for (const it of itens) {
+      if (!porTipo.has(it.rotulo)) porTipo.set(it.rotulo, []);
+      porTipo.get(it.rotulo).push({ x: it.x, y: it.y });
+    }
+    const resumo = [];
+    for (const [rotulo, pontos] of porTipo) {
+      const nome = `${rotulo} (IA)`;
+      p.medicoes = p.medicoes.filter(m => m.nome !== nome); // reanálise substitui
+      p.medicoes.push({ id: uid(), tipo: 'contagem', nome, pontos });
+      resumo.push(`${pontos.length} ${rotulo.toLowerCase()}`);
+    }
+    res.textContent = `🤖 A IA contou: ${resumo.join(', ')}. Criei medições de contagem com pins na planta — confira os pontos e ajuste o que faltar. Elas aparecem na Tabela (medições avulsas) e podem alimentar o orçamento.`;
+    salvar(); atualizarTudo();
+  } catch (err) {
+    res.textContent = 'Falha na análise por IA: ' + err.message;
+  }
+}
+
 $('btn-analisar-ia').addEventListener('click', analisarPorVisao);
 $('lnk-ia-chave').addEventListener('click', (e) => { e.preventDefault(); abrirConfigIA(); });
+
+$('btn-inst-orcamento').addEventListener('click', () => {
+  const novos = enviarParaOrcamento();
+  alert(novos
+    ? `${novos} serviço(s) de instalações/revestimentos adicionados ao orçamento com preços de referência — edite com os seus.`
+    : 'Os serviços de instalações já estão no orçamento — as quantidades se atualizam sozinhas.');
+  trocarVista('orcamento');
+});
 
 /* =============== Passo 1 — Escala =============== */
 
@@ -925,7 +972,7 @@ function cardAmbiente(p, a) {
 
 /* =============== Topbar: vistas, zoom, nomes =============== */
 
-const VISTAS = ['planta', 'tabela', 'orcamento', 'avanco', 'rdo'];
+const VISTAS = ['planta', 'tabela', 'orcamento', 'instalacoes', 'avanco', 'rdo'];
 for (const v of VISTAS) {
   $(`btn-view-${v}`).addEventListener('click', () => trocarVista(v));
 }
@@ -939,6 +986,7 @@ function trocarVista(v) {
   $('zoom-ctrl').style.visibility = v === 'planta' ? '' : 'hidden';
   if (v === 'tabela') renderTabela();
   else if (v === 'orcamento') renderOrcamento();
+  else if (v === 'instalacoes') renderInstalacoes();
   else if (v === 'avanco') renderAvanco();
   else if (v === 'rdo') renderRDO();
   else renderizar();

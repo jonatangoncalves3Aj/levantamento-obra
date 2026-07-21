@@ -1,5 +1,5 @@
 // Service Worker — Levantamento de Obra
-const CACHE = 'levantamento-v6';
+const CACHE = 'levantamento-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -18,6 +18,7 @@ const ASSETS = [
   './js/nuvem.js',
   './js/rdo.js',
   './js/ia.js',
+  './js/instalacoes.js',
   './vendor/inter-latin.woff2',
   './vendor/pdf.min.mjs',
   './vendor/pdf.worker.min.mjs',
