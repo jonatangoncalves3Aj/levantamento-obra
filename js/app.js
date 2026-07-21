@@ -18,6 +18,7 @@ import {
   obterPagina, esquecerPagina, contarPaginas,
 } from './viewer.js';
 import { analisarPlanta, detectarEscalaCarimbo } from './deteccao.js';
+import { analisarComIA, iaConfigurada, lerChaveIA, salvarChaveIA } from './ia.js';
 import { renderTabela, exportarCSV } from './tabela.js';
 import { fmt, num, dist, perimetroPoligono, areaPoligono, pxPorMetroDeEscala } from './calc.js';
 
@@ -59,6 +60,7 @@ function trocarProjeto(proj) {
   state.projeto = proj;
   state.pranchaAtualId = proj.pranchas[0]?.id || null;
   state.ambienteSelId = null;
+  state.sobreposicao.pranchaId = null;
   setTool(null);
   salvar();
   iniciarHistorico();
@@ -257,6 +259,25 @@ $('sel-disciplina').addEventListener('change', () => {
   if (p) { p.disciplina = $('sel-disciplina').value; salvar(); }
 });
 
+// Incorpora ambientes achados (pela leitura de texto ou pela IA) sem duplicar
+function incorporarAchados(p, achados) {
+  let novos = 0, total = 0, comPd = 0;
+  for (const a of achados) {
+    if (a.area) total += a.area;
+    if (a.pd) comPd++;
+    const jaExiste = p.ambientes.some(x =>
+      x.nome === a.nome &&
+      (a.area == null || Math.abs((num(x.area) ?? -1) - a.area) < 0.01));
+    if (jaExiste) continue;
+    const amb = novoAmbiente(a.nome, a.x, a.y);
+    if (a.area != null) { amb.area = a.area; amb.areaOrigem = 'planta'; }
+    if (a.pd) amb.pdAcab = a.pd;
+    p.ambientes.push(amb);
+    novos++;
+  }
+  return { novos, total, comPd };
+}
+
 $('btn-analisar').addEventListener('click', async () => {
   const p = pranchaAtual();
   if (!p) return alert('Abra uma prancha primeiro.');
@@ -266,31 +287,73 @@ $('btn-analisar').addEventListener('click', async () => {
   try {
     const { page } = await obterPagina(p);
     const achados = await analisarPlanta(page);
-    let novos = 0, total = 0, comPd = 0;
-    for (const a of achados) {
-      total += a.area;
-      if (a.pd) comPd++;
-      const jaExiste = p.ambientes.some(x => x.nome === a.nome && Math.abs((num(x.area) ?? -1) - a.area) < 0.01);
-      if (jaExiste) continue;
-      const amb = novoAmbiente(a.nome, a.x, a.y);
-      amb.area = a.area;
-      amb.areaOrigem = 'planta';
-      if (a.pd) amb.pdAcab = a.pd;
-      p.ambientes.push(amb);
-      novos++;
-    }
     if (!achados.length) {
-      res.innerHTML = 'Nenhum ambiente encontrado no texto do PDF. Se a planta for escaneada (imagem), crie os ambientes manualmente com <strong>+ Ambiente</strong>.';
-    } else {
-      res.innerHTML = `&check; Li <strong>${achados.length} ambiente(s)</strong> — nome, área${comPd ? ' e pé-direito' : ''} preenchidos. ` +
-        `Total = <strong>${fmt(total)} m²</strong>. Confira os pins azuis, ajuste nomes e apague o que não for ambiente.` +
-        (novos < achados.length ? ` (${achados.length - novos} já existiam.)` : '');
+      res.innerHTML = 'Nenhum ambiente encontrado no texto do PDF — a planta deve ser escaneada (imagem). ';
+      const btn = document.createElement('button');
+      btn.className = 'btn-mini';
+      btn.textContent = '🤖 Analisar com IA (visão)';
+      btn.addEventListener('click', analisarPorVisao);
+      res.appendChild(btn);
+      return;
     }
+    const { novos, total, comPd } = incorporarAchados(p, achados);
+    res.innerHTML = `&check; Li <strong>${achados.length} ambiente(s)</strong> — nome, área${comPd ? ' e pé-direito' : ''} preenchidos. ` +
+      `Total = <strong>${fmt(total)} m²</strong>. Confira os pins azuis, ajuste nomes e apague o que não for ambiente.` +
+      (novos < achados.length ? ` (${achados.length - novos} já existiam.)` : '');
     salvar(); atualizarTudo();
   } catch (err) {
     res.textContent = 'Falha ao analisar: ' + err.message;
   }
 });
+
+/* ----- IA por visão (plantas escaneadas) ----- */
+
+function abrirConfigIA(depois) {
+  $('inp-ia-chave').value = lerChaveIA() || '';
+  const dlg = $('dlg-ia');
+  dlg.showModal();
+  $('dlg-ia-ok').onclick = () => {
+    const chave = $('inp-ia-chave').value.trim();
+    if (!chave) return;
+    salvarChaveIA(chave);
+    dlg.close();
+    depois?.();
+  };
+  $('dlg-ia-cancelar').onclick = () => dlg.close();
+  $('dlg-ia-remover').onclick = () => {
+    salvarChaveIA(null);
+    $('inp-ia-chave').value = '';
+  };
+}
+
+async function analisarPorVisao() {
+  const p = pranchaAtual();
+  if (!p) return alert('Abra uma prancha primeiro.');
+  if (!iaConfigurada()) return abrirConfigIA(analisarPorVisao);
+  const res = $('resultado-analise');
+  res.hidden = false;
+  res.textContent = '🤖 Analisando a planta com IA (visão) — pode levar até 1 minuto…';
+  try {
+    const { page, largura, altura } = await obterPagina(p);
+    const achados = await analisarComIA(page, largura, altura);
+    if (!achados.length) {
+      res.textContent = 'A IA não identificou ambientes nesta prancha.';
+      return;
+    }
+    const { novos, total } = incorporarAchados(p, achados);
+    const comArea = achados.filter(a => a.area != null).length;
+    res.innerHTML = `🤖 A IA identificou <strong>${achados.length} ambiente(s)</strong>` +
+      (comArea ? ` — ${comArea} com área anotada (total ${fmt(total)} m²)` : '') +
+      '. Confira os pins, ajuste posições e nomes e apague o que não for ambiente.' +
+      (novos < achados.length ? ` (${achados.length - novos} já existiam.)` : '');
+    salvar(); atualizarTudo();
+  } catch (err) {
+    res.textContent = 'Falha na análise por IA: ' + err.message;
+  }
+}
+
+$('btn-analisar-ia').addEventListener('click', analisarPorVisao);
+$('lnk-ia-chave').addEventListener('click', (e) => { e.preventDefault(); abrirConfigIA(); });
 
 /* =============== Passo 1 — Escala =============== */
 
@@ -601,6 +664,22 @@ function renderSidebar() {
   statusEscala();
   if (p) $('sel-disciplina').value = p.disciplina;
 
+  // Sobreposição: outra prancha do projeto por cima da atual
+  if (state.sobreposicao.pranchaId &&
+      !state.projeto.pranchas.some(x => x.id === state.sobreposicao.pranchaId)) {
+    state.sobreposicao.pranchaId = null;
+  }
+  const outras = p ? state.projeto.pranchas.filter(x => x.id !== p.id) : [];
+  $('secao-sobrepor').hidden = !outras.length;
+  const selS = $('sel-sobrepor');
+  selS.innerHTML = '';
+  selS.appendChild(new Option('Nenhuma', ''));
+  for (const x of outras) {
+    selS.appendChild(new Option(`${x.pavimento} · ${x.disciplina}`, x.id, false,
+      x.id === state.sobreposicao.pranchaId));
+  }
+  $('inp-sobrepor-op').value = Math.round(state.sobreposicao.opacidade * 100);
+
   const contPav = $('pavimento-prancha');
   contPav.innerHTML = '';
   if (p) {
@@ -872,6 +951,17 @@ $('btn-nomes').addEventListener('click', () => {
   state.mostrarNomes = !state.mostrarNomes;
   $('btn-nomes').classList.toggle('ativo', state.mostrarNomes);
   desenharOverlay();
+});
+
+$('sel-sobrepor').addEventListener('change', () => {
+  state.sobreposicao.pranchaId = $('sel-sobrepor').value || null;
+  renderizar();
+});
+
+$('inp-sobrepor-op').addEventListener('input', () => {
+  state.sobreposicao.opacidade = $('inp-sobrepor-op').value / 100;
+  const c = $('canvas-sobrepor');
+  if (!c.hidden) c.style.opacity = state.sobreposicao.opacidade;
 });
 
 /* =============== Instalação (PWA) =============== */

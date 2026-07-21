@@ -7,6 +7,7 @@ import { fmt, num, dist, comprimentoPolilinha, perimetroPoligono } from './calc.
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('../vendor/pdf.worker.min.mjs', import.meta.url).href;
 
 const canvas = document.getElementById('canvas-pdf');
+const canvasSob = document.getElementById('canvas-sobrepor');
 const overlay = document.getElementById('overlay');
 const palco = document.getElementById('palco');
 const vazio = document.getElementById('vazio');
@@ -15,7 +16,8 @@ const viewport = document.getElementById('viewport');
 const SVG = 'http://www.w3.org/2000/svg';
 const cachePaginas = new Map(); // pranchaId -> { page, largura, altura }
 let tokenRender = 0;
-let tarefaRender = null; // render em andamento do pdf.js (para cancelar)
+let tarefaRender = null;    // render em andamento do pdf.js (para cancelar)
+let tarefaRenderSob = null; // idem, do canvas de sobreposição
 
 export async function obterPagina(prancha) {
   if (cachePaginas.has(prancha.id)) return cachePaginas.get(prancha.id);
@@ -43,6 +45,7 @@ export async function renderizar() {
   if (!prancha) {
     palco.classList.remove('visivel');
     vazio.style.display = '';
+    canvasSob.hidden = true;
     return;
   }
   vazio.style.display = 'none';
@@ -77,6 +80,45 @@ export async function renderizar() {
 
   overlay.setAttribute('viewBox', `0 0 ${largura} ${altura}`);
   desenharOverlay();
+  await renderizarSobreposicao(meuToken).catch(() => { canvasSob.hidden = true; });
+}
+
+// Renderiza outra prancha (disciplina) translúcida por cima da atual,
+// alinhando as larguras das folhas — modo "mesa de luz" para conferir
+// interferências entre disciplinas.
+async function renderizarSobreposicao(meuToken) {
+  const prancha = pranchaAtual();
+  const id = state.sobreposicao?.pranchaId;
+  const alvo = id && id !== prancha.id
+    ? state.projeto.pranchas.find(p => p.id === id) : null;
+  if (!alvo) { canvasSob.hidden = true; return; }
+
+  const { page, largura } = await obterPagina(alvo);
+  if (meuToken !== tokenRender) return;
+  if (tarefaRenderSob) {
+    tarefaRenderSob.cancel();
+    await tarefaRenderSob.promise.catch(() => {});
+    if (meuToken !== tokenRender) return;
+  }
+
+  const base = cachePaginas.get(prancha.id);
+  const fator = base ? base.largura / largura : 1;
+  const dpr = window.devicePixelRatio || 1;
+  const vp = page.getViewport({ scale: state.zoom * fator * dpr });
+  canvasSob.width = vp.width;
+  canvasSob.height = vp.height;
+  canvasSob.style.width = `${vp.width / dpr}px`;
+  canvasSob.style.height = `${vp.height / dpr}px`;
+  canvasSob.style.opacity = state.sobreposicao.opacidade;
+  canvasSob.hidden = false;
+  tarefaRenderSob = page.render({ canvasContext: canvasSob.getContext('2d'), viewport: vp });
+  try {
+    await tarefaRenderSob.promise;
+  } catch (e) {
+    if (e?.name !== 'RenderingCancelledException') throw e;
+  } finally {
+    tarefaRenderSob = null;
+  }
 }
 
 export function ajustar() {

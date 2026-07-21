@@ -9,6 +9,7 @@ export const state = {
   view: 'planta',
   tool: null,          // 'calibrar' | 'lado' | 'perimetro' | 'linear' | 'contagem' | 'ambiente'
   desenho: null,       // pontos em curso da ferramenta ativa
+  sobreposicao: { pranchaId: null, opacidade: 0.5 }, // prancha translúcida por cima
 };
 
 const CHAVE_LEGADA = 'levantamento:projeto';

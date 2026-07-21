@@ -90,6 +90,7 @@ body {
 .palco { position: relative; width: max-content; margin: 24px; display: none; }
 .palco.visivel { display: block; }
 #canvas-pdf { display: block; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.6); }
+#canvas-sobrepor { position: absolute; left: 0; top: 0; pointer-events: none; mix-blend-mode: multiply; }
 #overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
 #overlay.medindo { cursor: crosshair; }
 

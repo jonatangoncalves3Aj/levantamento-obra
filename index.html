@@ -62,6 +62,7 @@
     <div class="viewport" id="viewport">
       <div class="palco" id="palco">
         <canvas id="canvas-pdf"></canvas>
+        <canvas id="canvas-sobrepor" hidden></canvas>
         <svg id="overlay" xmlns="http://www.w3.org/2000/svg"></svg>
       </div>
       <div class="vazio" id="vazio">
@@ -91,8 +92,18 @@
           <option>Climatiza&ccedil;&atilde;o</option>
         </select>
         <button id="btn-analisar" class="btn-passo">&#128269;&nbsp; Analisar planta</button>
-        <p class="dica">Selecione a disciplina e clique em analisar. Arquitetura l&ecirc; ambientes (nome, &aacute;rea e p&eacute;-direito).</p>
+        <button id="btn-analisar-ia" class="btn-passo">&#129302;&nbsp; Analisar com IA (vis&atilde;o)</button>
+        <p class="dica">Analisar l&ecirc; o texto do PDF (nome, &aacute;rea e p&eacute;-direito). Para planta <strong>escaneada</strong> (imagem), use a IA por vis&atilde;o. <a href="#" id="lnk-ia-chave">Configurar chave de IA</a></p>
         <p class="resultado" id="resultado-analise" hidden></p>
+      </section>
+
+      <section class="passo" id="secao-sobrepor" hidden>
+        <h2>Sobreposi&ccedil;&atilde;o</h2>
+        <label class="campo-label" for="sel-sobrepor">Comparar com outra prancha</label>
+        <select id="sel-sobrepor"></select>
+        <label class="campo-label" for="inp-sobrepor-op">Intensidade</label>
+        <input id="inp-sobrepor-op" type="range" min="10" max="90" step="5" value="50" />
+        <p class="dica">A prancha escolhida aparece por cima, transl&uacute;cida — para conferir interfer&ecirc;ncias entre disciplinas (ex.: hidr&aacute;ulica sobre arquitetura).</p>
       </section>
 
       <section class="passo">
@@ -132,7 +143,7 @@
 
       <section class="passo">
         <p class="dica">Atalhos: <strong>1&ndash;4</strong> ferramentas &middot; <strong>C</strong> calibrar &middot; <strong>A</strong> ambiente &middot; <strong>T</strong> planta/tabela &middot; <strong>N</strong> nomes &middot; <strong>+/&minus;</strong> zoom &middot; <strong>0</strong> ajustar &middot; <strong>Ctrl+Z</strong> desfazer &middot; <strong>Esc</strong> cancelar &middot; arraste para navegar.</p>
-        <p class="dica" id="versao-app">Vers&atilde;o 3.0 &middot; 20/07/2026</p>
+        <p class="dica" id="versao-app">Vers&atilde;o 3.1 &middot; 21/07/2026</p>
       </section>
     </aside>
   </main>
@@ -247,6 +258,20 @@
     <p class="dica">Depois de instalado, o app abre em tela cheia e funciona offline.</p>
     <div class="dlg-botoes">
       <button id="dlg-instalar-fechar" class="btn-laranja">Entendi</button>
+    </div>
+  </dialog>
+
+  <!-- Diálogo: chave da IA por visão -->
+  <dialog id="dlg-ia">
+    <h3>&#129302; IA por vis&atilde;o</h3>
+    <p class="dica">Para plantas <strong>escaneadas</strong> (imagem, sem texto), a an&aacute;lise usa a API da Anthropic (Claude), que enxerga a prancha e identifica os ambientes. Crie uma chave em <strong>console.anthropic.com</strong> &rarr; API Keys e cole abaixo.</p>
+    <label class="campo-label" style="margin-top:8px">Chave de API</label>
+    <input id="inp-ia-chave" type="password" placeholder="sk-ant-..." />
+    <p class="dica">A chave fica salva <strong>s&oacute; neste aparelho</strong> e cada an&aacute;lise &eacute; cobrada pela Anthropic (centavos por prancha).</p>
+    <div class="dlg-botoes">
+      <button id="dlg-ia-remover" class="btn-ghost">Remover chave</button>
+      <button id="dlg-ia-cancelar" class="btn-ghost">Cancelar</button>
+      <button id="dlg-ia-ok" class="btn-laranja">Salvar</button>
     </div>
   </dialog>
 
