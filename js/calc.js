@@ -7,7 +7,11 @@ export const LIMITE_JANELA_M2 = 2.0;
 
 export function num(v) {
   if (v === null || v === undefined || v === '') return null;
-  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  let s = String(v).trim();
+  // Padrão brasileiro: se há vírgula decimal, os pontos são separador de milhar
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(s);
   return Number.isFinite(n) ? n : null;
 }
 

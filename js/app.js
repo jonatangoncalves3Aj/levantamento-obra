@@ -124,7 +124,9 @@ function renderAbas() {
   for (const p of state.projeto.pranchas) {
     const aba = document.createElement('button');
     aba.className = 'aba' + (p.id === state.pranchaAtualId ? ' ativa' : '');
-    aba.innerHTML = `&#127968; <span>${p.pavimento}${p.ambientes.length ? ' · ' + p.ambientes.length : ''}</span>`;
+    const rotuloAba = document.createElement('span');
+    rotuloAba.textContent = p.pavimento + (p.ambientes.length ? ' · ' + p.ambientes.length : '');
+    aba.append('🏠 ', rotuloAba);
     const fechar = document.createElement('button');
     fechar.className = 'fechar';
     fechar.innerHTML = '&times;';
@@ -224,7 +226,11 @@ $('inp-arquivos').addEventListener('change', async (e) => {
   pendentes.forEach((pd, i) => {
     const linha = document.createElement('div');
     linha.className = 'dlg-prancha';
-    linha.innerHTML = `<span class="nome-arq" title="${pd.rotulo}">${pd.rotulo}</span>`;
+    const nomeArq = document.createElement('span');
+    nomeArq.className = 'nome-arq';
+    nomeArq.title = pd.rotulo;
+    nomeArq.textContent = pd.rotulo;
+    linha.appendChild(nomeArq);
     if (!state.projeto.pavimentos.includes(pd.pavimento)) pd.pavimento = state.projeto.pavimentos[0] || 'Térreo';
     const inpPav = selPavimento(pd.pavimento, v => { pd.pavimento = v; });
     const selDisc = document.createElement('select');
@@ -260,7 +266,7 @@ $('sel-disciplina').addEventListener('change', () => {
 });
 
 // Incorpora ambientes achados (pela leitura de texto ou pela IA) sem duplicar
-function incorporarAchados(p, achados) {
+function incorporarAchados(p, achados, origem = 'planta') {
   let novos = 0, total = 0, comPd = 0;
   for (const a of achados) {
     if (a.area) total += a.area;
@@ -270,7 +276,7 @@ function incorporarAchados(p, achados) {
       (a.area == null || Math.abs((num(x.area) ?? -1) - a.area) < 0.01));
     if (jaExiste) continue;
     const amb = novoAmbiente(a.nome, a.x, a.y);
-    if (a.area != null) { amb.area = a.area; amb.areaOrigem = 'planta'; }
+    if (a.area != null) { amb.area = a.area; amb.areaOrigem = origem; }
     if (a.pd) amb.pdAcab = a.pd;
     p.ambientes.push(amb);
     novos++;
@@ -340,7 +346,7 @@ async function analisarPorVisao() {
       res.textContent = 'A IA não identificou ambientes nesta prancha.';
       return;
     }
-    const { novos, total } = incorporarAchados(p, achados);
+    const { novos, total } = incorporarAchados(p, achados, 'ia');
     const comArea = achados.filter(a => a.area != null).length;
     res.innerHTML = `🤖 A IA identificou <strong>${achados.length} ambiente(s)</strong>` +
       (comArea ? ` — ${comArea} com área anotada (total ${fmt(total)} m²)` : '') +
@@ -725,7 +731,11 @@ function renderSidebar() {
         for (let i = 1; i < m.pontos.length; i++) c += dist(m.pontos[i - 1], m.pontos[i]);
         valor = `${fmt(c / p.escala.pxPorMetro)} m`;
       }
-      linha.innerHTML = `<span>${m.tipo === 'contagem' ? '⌾' : '╱'} ${m.nome}</span><strong>${valor}</strong>`;
+      const rotuloMed = document.createElement('span');
+      rotuloMed.textContent = `${m.tipo === 'contagem' ? '⌾' : '╱'} ${m.nome}`;
+      const valorMed = document.createElement('strong');
+      valorMed.textContent = valor;
+      linha.append(rotuloMed, valorMed);
       const del = document.createElement('button');
       del.textContent = '×';
       del.title = 'Excluir medição';
@@ -832,8 +842,9 @@ function cardAmbiente(p, a) {
   if (num(a.area) !== null) {
     const origem = document.createElement('p');
     origem.className = 'card-origem';
-    const rotOrigem = { planta: 'da planta', medida: 'medida', manual: 'manual' }[a.areaOrigem] || '';
-    origem.innerHTML = `&#9670; ${rotOrigem} — Área ${fmt(num(a.area))} m²`;
+    const rotOrigem = { planta: 'da planta', medida: 'medida', manual: 'manual', ia: 'IA — confira' }[a.areaOrigem] || '';
+    origem.textContent = `◆ ${rotOrigem} — Área ${fmt(num(a.area))} m²`;
+    if (a.areaOrigem === 'ia') origem.style.color = 'var(--laranja-2)';
     card.appendChild(origem);
   }
 
@@ -966,6 +977,13 @@ $('inp-sobrepor-op').addEventListener('input', () => {
 
 /* =============== Instalação (PWA) =============== */
 
+// Registro do service worker (fora do HTML para a CSP não permitir script inline)
+if ('serviceWorker' in navigator) {
+  const registrarSW = () => navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (document.readyState === 'complete') registrarSW();
+  else window.addEventListener('load', registrarSW);
+}
+
 let promptInstalacao = null;
 const emAppInstalado = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 
@@ -1011,10 +1029,12 @@ $('btn-orc-relatorio').addEventListener('click', () => relatorio($('btn-orc-rela
 
 /* =============== Nuvem (banco de dados) =============== */
 
+// Sempre textContent: mensagens podem conter dados do usuário ou do servidor
 function nuvemStatus(msg, ok = true) {
   const el = $('nuvem-status');
   el.hidden = false;
-  el.innerHTML = ok ? msg : `<span class="alerta">${msg}</span>`;
+  el.textContent = msg;
+  el.classList.toggle('alerta', !ok);
 }
 
 function renderConta() {
@@ -1024,7 +1044,9 @@ function renderConta() {
   if (sessao) {
     const p = document.createElement('p');
     p.className = 'dica';
-    p.innerHTML = `Conectado como <strong>${sessao.email}</strong> `;
+    const emailEl = document.createElement('strong');
+    emailEl.textContent = sessao.email;
+    p.append('Conectado como ', emailEl, ' ');
     const btnSair = document.createElement('button');
     btnSair.className = 'btn-mini';
     btnSair.textContent = 'Sair';
@@ -1055,7 +1077,7 @@ function renderConta() {
     nuvemStatus('Entrando…');
     try {
       await nuvem.entrar(c.email, c.senha);
-      nuvemStatus('&check; Conectado.');
+      nuvemStatus('✓ Conectado.');
       renderConta(); atualizarIndicadorSync();
     } catch (e) { nuvemStatus('Falha ao entrar: ' + e.message, false); }
   });
@@ -1065,8 +1087,8 @@ function renderConta() {
     nuvemStatus('Criando conta…');
     try {
       const sessao = await nuvem.cadastrar(c.email, c.senha);
-      if (sessao) { nuvemStatus('&check; Conta criada e conectada.'); renderConta(); atualizarIndicadorSync(); }
-      else nuvemStatus('Conta criada — <strong>confirme pelo link enviado ao seu e-mail</strong> e depois clique em Entrar.');
+      if (sessao) { nuvemStatus('✓ Conta criada e conectada.'); renderConta(); atualizarIndicadorSync(); }
+      else nuvemStatus('Conta criada — confirme pelo link enviado ao seu e-mail e depois clique em Entrar.');
     } catch (e) { nuvemStatus('Falha ao criar conta: ' + e.message, false); }
   });
 }
@@ -1115,7 +1137,7 @@ $('btn-nuvem-testar').addEventListener('click', async () => {
   if (!salvarConfigNuvem()) return;
   nuvemStatus('Testando conexão…');
   const r = await nuvem.testarConexao();
-  nuvemStatus((r.ok ? '&check; ' : '') + r.msg, r.ok);
+  nuvemStatus((r.ok ? '✓ ' : '') + r.msg, r.ok);
 });
 
 $('btn-nuvem-enviar').addEventListener('click', async () => {
@@ -1123,8 +1145,21 @@ $('btn-nuvem-enviar').addEventListener('click', async () => {
   nuvemStatus('Enviando projeto (com as plantas)…');
   try {
     await nuvem.enviarProjeto();
-    nuvemStatus(`&check; Projeto "<strong>${state.projeto.nome}</strong>" salvo na nuvem.`);
-  } catch (e) { nuvemStatus('Falha ao enviar: ' + e.message, false); }
+    nuvemStatus(`✓ Projeto "${state.projeto.nome}" salvo na nuvem.`);
+  } catch (e) {
+    if (e.conflito) {
+      if (confirm(`Atenção: ${e.message}\n\nSobrescrever a nuvem com a versão deste aparelho?`)) {
+        try {
+          await nuvem.enviarProjeto(true);
+          nuvemStatus(`✓ Projeto "${state.projeto.nome}" salvo na nuvem (versão deste aparelho).`);
+        } catch (e2) { nuvemStatus('Falha ao enviar: ' + e2.message, false); }
+      } else {
+        nuvemStatus('Envio cancelado — use "Baixar da nuvem" para ver a versão mais recente.', false);
+      }
+      return;
+    }
+    nuvemStatus('Falha ao enviar: ' + e.message, false);
+  }
 });
 
 $('btn-nuvem-baixar').addEventListener('click', async () => {
@@ -1140,7 +1175,12 @@ $('btn-nuvem-baixar').addEventListener('click', async () => {
       const linha = document.createElement('div');
       linha.className = 'medicao-linha';
       const quando = new Date(p.atualizado_em).toLocaleString('pt-BR');
-      linha.innerHTML = `<span>${p.nome}</span><small style="color:var(--texto-2)">${quando}</small>`;
+      const nomeProj = document.createElement('span');
+      nomeProj.textContent = p.nome;
+      const quandoEl = document.createElement('small');
+      quandoEl.style.color = 'var(--texto-2)';
+      quandoEl.textContent = quando;
+      linha.append(nomeProj, quandoEl);
       const btn = document.createElement('button');
       btn.className = 'btn-mini';
       btn.style.marginTop = '0';

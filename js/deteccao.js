@@ -2,9 +2,9 @@
 // Plantas vetoriais de arquitetura trazem nome do ambiente, área (m²) e
 // pé-direito como texto selecionável; agrupamos tokens próximos.
 
-const RE_AREA = /(\d{1,3}(?:\.\d{3})*,\d{1,2}|\d+[.,]\d{1,2})\s*m\s*(?:²|2(?!\d))/i;
+const RE_AREA = /(\d{1,3}(?:\.\d{3})*,\d{1,2}|\d+[.,]\d{1,2}|\d{1,4})\s*m\s*(?:²|2(?!\d))/i;
 const RE_PD = /P\.?\s*D\.?\s*[.:=]?\s*(\d+[.,]\d{1,2})/i;
-const RE_ESCALA = /(?:^|[^\d])1\s*[:\/]\s*(20|25|50|75|100|125|150|175|200|250|500)(?:[^\d]|$)/;
+const RE_ESCALA = /(?:^|[^\d])1\s*[:\/]\s*(20|25|30|40|50|75|100|125|150|175|200|250|500)(?:[^\d]|$)/;
 
 const parseBR = (s) => parseFloat(s.replace(/\./g, '').replace(',', '.'));
 

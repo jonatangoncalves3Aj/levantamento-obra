@@ -142,9 +142,37 @@ export async function testarConexao() {
   return { ok: false, msg: `Servidor respondeu ${resp.status}: ${corpo.slice(0, 160)}` };
 }
 
-// Envia (cria ou atualiza) o projeto atual
-export async function enviarProjeto() {
+/* Marca de sincronização: guarda o atualizado_em que ESTE aparelho gravou
+   por último em cada projeto, para detectar quando outro aparelho/aba
+   alterou a nuvem no meio tempo (evita sobrescrever sem avisar). */
+const CHAVE_MARCAS = 'levantamento:nuvem:marcas';
+
+function lerMarcas() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_MARCAS)) || {}; }
+  catch { return {}; }
+}
+
+function gravarMarca(id, quando) {
+  const m = lerMarcas();
+  m[id] = quando;
+  localStorage.setItem(CHAVE_MARCAS, JSON.stringify(m));
+}
+
+// Envia (cria ou atualiza) o projeto atual. Sem `forcar`, recusa com
+// err.conflito=true se a nuvem tiver versão que este aparelho não enviou.
+export async function enviarProjeto(forcar = false) {
   const proj = state.projeto;
+  if (!forcar) {
+    const resp = await api(`projetos?id=eq.${encodeURIComponent(proj.id)}&select=atualizado_em`);
+    const linhas = await resp.json().catch(() => []);
+    const remoto = linhas[0]?.atualizado_em || null;
+    if (remoto && remoto !== (lerMarcas()[proj.id] || null)) {
+      const e = new Error('a versão na nuvem foi alterada por outro aparelho ou aba desde o último envio daqui.');
+      e.conflito = true;
+      throw e;
+    }
+  }
+  const agora = new Date().toISOString();
   const pacote = await exportarProjetoJSON(proj);
   await api('projetos', {
     method: 'POST',
@@ -152,10 +180,11 @@ export async function enviarProjeto() {
     body: JSON.stringify({
       id: proj.id,
       nome: proj.nome,
-      atualizado_em: new Date().toISOString(),
+      atualizado_em: agora,
       pacote: JSON.parse(pacote),
     }),
   });
+  gravarMarca(proj.id, agora);
 }
 
 // Lista os projetos salvos na nuvem (sem baixar os pacotes)

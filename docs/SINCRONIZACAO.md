@@ -36,6 +36,12 @@ create policy "acesso via anon key"
   with check (true);
 ```
 
+> ⚠️ **Atenção:** essa policy deixa a tabela aberta — qualquer pessoa que
+> tiver a URL + chave publishable consegue ler, sobrescrever e apagar
+> TODOS os projetos salvos. Use só para testar sozinho. Para uso real,
+> aplique a evolução com contas por usuário (seção no fim deste guia),
+> que restringe cada projeto ao seu dono.
+
 ## Passo 3 — Copiar as credenciais
 
 No painel do Supabase, vá em **Settings** e copie:
