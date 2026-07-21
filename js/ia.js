@@ -1,18 +1,49 @@
 // Análise de planta por visão (IA) — para PDFs escaneados/sem camada de texto.
 // Chama a API da Anthropic diretamente do navegador com a chave do usuário
-// (armazenada só neste aparelho). Modelo: claude-opus-4-8 com saída
+// (armazenada só neste aparelho). Modelo escolhido pelo usuário, com saída
 // estruturada (JSON Schema), imagem da prancha em PNG base64.
 
 const CHAVE_IA = 'levantamento:ia';
 
-export function lerChaveIA() {
-  try { return JSON.parse(localStorage.getItem(CHAVE_IA))?.chave || null; }
-  catch { return null; }
+// Modelos com visão, do mais barato ao mais caro (preços por 1M tokens).
+export const MODELOS_IA = [
+  { id: 'claude-haiku-4-5', nome: 'Haiku 4.5 — mais barato', custo: 'US$ 1 / 5 por 1M' },
+  { id: 'claude-sonnet-5', nome: 'Sonnet 5 — equilíbrio', custo: 'US$ 3 / 15 por 1M' },
+  { id: 'claude-opus-4-8', nome: 'Opus 4.8 — máxima precisão', custo: 'US$ 5 / 25 por 1M' },
+];
+const MODELO_PADRAO = 'claude-haiku-4-5';
+
+function lerConfigIA() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_IA)) || {}; }
+  catch { return {}; }
 }
 
-export function salvarChaveIA(chave) {
-  if (chave) localStorage.setItem(CHAVE_IA, JSON.stringify({ chave: chave.trim() }));
+function gravarConfigIA(c) {
+  if (c.chave || c.modelo) localStorage.setItem(CHAVE_IA, JSON.stringify(c));
   else localStorage.removeItem(CHAVE_IA);
+}
+
+export function lerChaveIA() { return lerConfigIA().chave || null; }
+
+export function salvarChaveIA(chave) {
+  const c = lerConfigIA();
+  if (chave) c.chave = chave.trim(); else delete c.chave;
+  gravarConfigIA(c);
+}
+
+export function lerModeloIA() {
+  const m = lerConfigIA().modelo;
+  return MODELOS_IA.some(x => x.id === m) ? m : MODELO_PADRAO;
+}
+
+export function salvarModeloIA(modelo) {
+  const c = lerConfigIA();
+  c.modelo = modelo;
+  gravarConfigIA(c);
+}
+
+export function nomeModeloIA(id = lerModeloIA()) {
+  return MODELOS_IA.find(x => x.id === id)?.nome || id;
 }
 
 export function iaConfigurada() { return !!lerChaveIA(); }
@@ -66,7 +97,7 @@ async function chamarIA(esquema, sistema, pedido, png) {
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-opus-4-8',
+      model: lerModeloIA(),
       max_tokens: 8192,
       output_config: { format: { type: 'json_schema', schema: esquema } },
       system: sistema,

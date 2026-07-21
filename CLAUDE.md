@@ -65,7 +65,7 @@ coordenação de obra completa. Interface 100% em pt-BR.
 | `store.js` | estado global, modelo de dados, persistência, histórico (undo), multi-projeto, export/import .json com PDFs embutidos |
 | `viewer.js` | render do PDF (com cancelamento), overlay SVG (pins, medições, pendências), sobreposição de disciplina, zoom/ajuste |
 | `deteccao.js` | heurística da camada de texto: ambientes (nome/área/PD) e escala do carimbo |
-| `ia.js` | Anthropic API direto do navegador (modelo `claude-opus-4-8`, saída JSON Schema, header `anthropic-dangerous-direct-browser-access`): ambientes por visão e contagem de símbolos por disciplina |
+| `ia.js` | Anthropic API direto do navegador (modelo escolhido pelo usuário via `MODELOS_IA`/`lerModeloIA`, default `claude-haiku-4-5` = mais barato; saída JSON Schema, header `anthropic-dangerous-direct-browser-access`): ambientes por visão e contagem de símbolos por disciplina. Chave+modelo em `localStorage['levantamento:ia']` = `{chave, modelo}` |
 | `calc.js` | `num`/`fmt` BR, distâncias, shoelace, escala (72/0,0254 pt por metro), `calcAmbiente` (paredes e desconto de vãos) |
 | `tabela.js` | vista Tabela + CSV |
 | `orcamento.js` | vista Orçamento, `FONTES` de quantidade (inclui `inst:*` e revestimentos molhado/seco), ABC, BDI, CSV de preços |

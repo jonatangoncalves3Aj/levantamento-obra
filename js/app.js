@@ -21,6 +21,7 @@ import { analisarPlanta, detectarEscalaCarimbo } from './deteccao.js';
 import {
   analisarComIA, analisarSimbolosIA, disciplinaTemSimbolos,
   iaConfigurada, lerChaveIA, salvarChaveIA,
+  MODELOS_IA, lerModeloIA, salvarModeloIA, nomeModeloIA,
 } from './ia.js';
 import { renderInstalacoes, enviarParaOrcamento } from './instalacoes.js';
 import { renderTabela, exportarCSV } from './tabela.js';
@@ -321,10 +322,21 @@ $('btn-analisar').addEventListener('click', async () => {
 
 function abrirConfigIA(depois) {
   $('inp-ia-chave').value = lerChaveIA() || '';
+  const sel = $('sel-ia-modelo');
+  sel.innerHTML = '';
+  for (const m of MODELOS_IA) sel.appendChild(new Option(m.nome, m.id));
+  sel.value = lerModeloIA();
+  const mostrarCusto = () => {
+    const m = MODELOS_IA.find(x => x.id === sel.value);
+    $('ia-modelo-custo').textContent = m ? `Preço Anthropic: ${m.custo} (entrada / saída).` : '';
+  };
+  sel.onchange = mostrarCusto;
+  mostrarCusto();
   const dlg = $('dlg-ia');
   dlg.showModal();
   $('dlg-ia-ok').onclick = () => {
     const chave = $('inp-ia-chave').value.trim();
+    salvarModeloIA(sel.value);            // o modelo pode ser trocado sozinho
     if (!chave) return;
     salvarChaveIA(chave);
     dlg.close();
@@ -345,7 +357,7 @@ async function analisarPorVisao() {
   if (disciplinaTemSimbolos(p.disciplina)) return analisarSimbolosPorVisao(p);
   const res = $('resultado-analise');
   res.hidden = false;
-  res.textContent = '🤖 Analisando a planta com IA (visão) — pode levar até 1 minuto…';
+  res.textContent = `🤖 Analisando a planta com ${nomeModeloIA()} — pode levar até 1 minuto…`;
   try {
     const { page, largura, altura } = await obterPagina(p);
     const achados = await analisarComIA(page, largura, altura);
@@ -370,7 +382,7 @@ async function analisarPorVisao() {
 async function analisarSimbolosPorVisao(p) {
   const res = $('resultado-analise');
   res.hidden = false;
-  res.textContent = `🤖 Contando símbolos de ${p.disciplina.toLowerCase()} com IA — pode levar até 1 minuto…`;
+  res.textContent = `🤖 Contando símbolos de ${p.disciplina.toLowerCase()} com ${nomeModeloIA()} — pode levar até 1 minuto…`;
   try {
     const { page, largura, altura } = await obterPagina(p);
     const { legenda, itens } = await analisarSimbolosIA(page, largura, altura, p.disciplina);
