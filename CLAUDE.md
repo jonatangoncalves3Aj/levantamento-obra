@@ -80,8 +80,12 @@ Modelo de dados: `projeto { pranchas[], pavimentos[], catalogo[], bdi,
 dataInicio/Fim, snapshots[], rdos[] }` → `prancha { pavimento, disciplina,
 escala{pxPorMetro}, ambientes[], medicoes[], pendencias[] }` → `ambiente
 { nome, pin{x,y}, area, areaOrigem('planta'|'medida'|'manual'|'ia'), lado,
-perimetro, pdOsso, pdAcab, vaos[], qtd, avanco, tipoInst? }`. Campos novos:
-adicione migração em `garantirCampos()` no store.
+perimetro, pdOsso, pdAcab, vaos[], qtd, avanco, tipoInst?, pavimento? }`.
+`ambiente.pavimento` e `medicao.pavimento` são overrides opcionais (folha
+com vários pavimentos desenhados — ferramenta "Separar pavimentos"); o
+efetivo vem de `pavimentoDoAmbiente()`/`ambientesPorPavimento()` no store —
+**agrupe sempre por eles**, nunca direto por `prancha.pavimento`. Campos
+novos: adicione migração em `garantirCampos()` no store.
 
 ## Integrações
 

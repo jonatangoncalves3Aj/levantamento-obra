@@ -102,7 +102,7 @@ function abaInstalacoes(proj) {
     for (const m of p.medicoes) {
       if (m.tipo !== 'contagem') continue;
       temContagem = true;
-      linhas.push([p.pavimento, p.disciplina, m.nome, m.pontos.length]);
+      linhas.push([m.pavimento || p.pavimento, p.disciplina, m.nome, m.pontos.length]);
     }
   }
   if (!temContagem) {

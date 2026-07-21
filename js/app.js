@@ -630,22 +630,30 @@ overlay.addEventListener('click', (e) => {
   if (state.tool === 'pavzona' && state.desenho.pontos.length === 2) abrirZonaPavimento();
 });
 
-// Reatribui a outro pavimento os ambientes dentro do retângulo marcado
-// (folhas com mais de um pavimento desenhado lado a lado)
+// Reatribui a outro pavimento o que estiver dentro do retângulo marcado
+// (folhas com mais de um pavimento desenhado lado a lado): ambientes pelo
+// pin, e medições de contagem ponto a ponto.
 function abrirZonaPavimento() {
   const p = pranchaAtual();
   const [a, b] = state.desenho.pontos;
   const x1 = Math.min(a.x, b.x), x2 = Math.max(a.x, b.x);
   const y1 = Math.min(a.y, b.y), y2 = Math.max(a.y, b.y);
-  const dentro = p.ambientes.filter(am =>
-    am.pin.x >= x1 && am.pin.x <= x2 && am.pin.y >= y1 && am.pin.y <= y2);
-  if (!dentro.length) {
-    alert('Nenhum ambiente dentro da região marcada — marque os dois cantos opostos em volta da planta desejada (os pins precisam estar dentro).');
+  const dentroPt = (pt) => pt.x >= x1 && pt.x <= x2 && pt.y >= y1 && pt.y <= y2;
+
+  const dentro = p.ambientes.filter(am => dentroPt(am.pin));
+  const pontosContagem = p.medicoes.reduce((n, m) =>
+    n + (m.tipo === 'contagem' ? m.pontos.filter(dentroPt).length : 0), 0);
+  if (!dentro.length && !pontosContagem) {
+    alert('Nada dentro da região marcada — marque os dois cantos opostos em volta da planta desejada (os pins precisam ficar dentro).');
     setTool(null);
     return;
   }
-  $('dlg-zona-msg').textContent =
-    `${dentro.length} ambiente(s) na região: ${dentro.map(x => x.nome).join(', ').slice(0, 120)}`;
+
+  const partes = [];
+  if (dentro.length) partes.push(`${dentro.length} ambiente(s): ${dentro.map(x => x.nome).join(', ').slice(0, 100)}`);
+  if (pontosContagem) partes.push(`${pontosContagem} ponto(s) de contagem`);
+  $('dlg-zona-msg').textContent = `Na região — ${partes.join(' · ')}`;
+
   const cont = $('dlg-zona-pav');
   cont.innerHTML = '';
   let escolhido = p.pavimento;
@@ -654,7 +662,27 @@ function abrirZonaPavimento() {
   dlg.showModal();
   $('dlg-zona-ok').onclick = () => {
     dlg.close();
-    for (const am of dentro) am.pavimento = escolhido;
+    // Mesmo pavimento da prancha = volta a herdar (null), para acompanhar
+    // uma eventual renomeação da prancha depois
+    const pav = escolhido === p.pavimento ? null : escolhido;
+    for (const am of dentro) am.pavimento = pav;
+
+    // Medições: inteiramente dentro da região mudam de pavimento;
+    // contagens parcialmente dentro são divididas ponto a ponto
+    for (const m of [...p.medicoes]) {
+      if (!m.pontos.length) continue;
+      if (m.pontos.every(dentroPt)) { m.pavimento = pav; continue; }
+      if (m.tipo !== 'contagem') continue;
+      const dentroPts = m.pontos.filter(dentroPt);
+      if (!dentroPts.length) continue;
+      m.pontos = m.pontos.filter(pt => !dentroPt(pt));
+      const alvo = p.medicoes.find(x => x !== m && x.tipo === 'contagem' &&
+        x.nome === m.nome && (x.pavimento ?? null) === pav);
+      if (alvo) alvo.pontos.push(...dentroPts);
+      else p.medicoes.push({ id: uid(), tipo: 'contagem', nome: m.nome, pavimento: pav, pontos: dentroPts });
+    }
+    p.medicoes = p.medicoes.filter(m => m.tipo !== 'contagem' || m.pontos.length);
+
     setTool(null);
     salvar(); atualizarTudo();
   };
@@ -819,7 +847,8 @@ function renderSidebar() {
         valor = `${fmt(c / p.escala.pxPorMetro)} m`;
       }
       const rotuloMed = document.createElement('span');
-      rotuloMed.textContent = `${m.tipo === 'contagem' ? '⌾' : '╱'} ${m.nome}`;
+      rotuloMed.textContent = `${m.tipo === 'contagem' ? '⌾' : '╱'} ${m.nome}` +
+        (m.pavimento ? ` · ${m.pavimento}` : '');
       const valorMed = document.createElement('strong');
       valorMed.textContent = valor;
       linha.append(rotuloMed, valorMed);
@@ -947,7 +976,7 @@ function cardAmbiente(p, a) {
   const labPav = document.createElement('label');
   labPav.textContent = 'Pavimento';
   const selPavAmb = document.createElement('select');
-  selPavAmb.appendChild(new Option('(da prancha)', '', false, !a.pavimento));
+  selPavAmb.appendChild(new Option(`(da prancha: ${p.pavimento})`, '', false, !a.pavimento));
   for (const pv of state.projeto.pavimentos) {
     selPavAmb.appendChild(new Option(pv, pv, false, a.pavimento === pv));
   }

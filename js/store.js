@@ -60,6 +60,9 @@ export function garantirCampos(proj) {
       a.avanco ??= 0;
       if (a.pavimento && !proj.pavimentos.includes(a.pavimento)) proj.pavimentos.push(a.pavimento);
     }
+    for (const m of p.medicoes) {
+      if (m.pavimento && !proj.pavimentos.includes(m.pavimento)) proj.pavimentos.push(m.pavimento);
+    }
   }
   return proj;
 }

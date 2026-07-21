@@ -137,12 +137,13 @@ function renderMedicoesAvulsas() {
   const linhas = [];
   for (const p of state.projeto.pranchas) {
     for (const m of p.medicoes) {
+      const pav = m.pavimento || p.pavimento;
       if (m.tipo === 'linear') {
         const ppm = p.escala?.pxPorMetro;
         const compr = ppm ? comprimentoPolilinha(m.pontos) / ppm : null;
-        linhas.push([p.pavimento, m.nome, 'Linear', compr !== null ? `${fmt(compr)} m` : '—']);
+        linhas.push([pav, m.nome, 'Linear', compr !== null ? `${fmt(compr)} m` : '—']);
       } else if (m.tipo === 'contagem') {
-        linhas.push([p.pavimento, m.nome, 'Contagem', `${m.pontos.length} un`]);
+        linhas.push([pav, m.nome, 'Contagem', `${m.pontos.length} un`]);
       }
     }
   }

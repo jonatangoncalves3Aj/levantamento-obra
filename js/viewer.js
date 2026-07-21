@@ -197,11 +197,22 @@ export function desenharOverlay() {
   // Desenho em curso (ferramenta ativa)
   if (state.desenho?.pontos?.length) {
     const pts = state.desenho.pontos;
-    const cls = state.tool === 'calibrar' ? 'calibra-linha' : 'medida-linha';
-    overlay.appendChild(el('polyline', {
-      class: cls, 'stroke-width': traco * 1.3, fill: 'none',
-      points: pts.map(p => `${p.x},${p.y}`).join(' '),
-    }));
+    if (state.tool === 'pavzona' && pts.length === 2) {
+      // Região de separação de pavimentos: retângulo tracejado
+      const [a, b] = pts;
+      overlay.appendChild(el('rect', {
+        x: Math.min(a.x, b.x), y: Math.min(a.y, b.y),
+        width: Math.abs(b.x - a.x), height: Math.abs(b.y - a.y),
+        class: 'medida-linha', fill: 'rgba(249, 115, 22, .07)',
+        'stroke-width': traco * 1.3, 'stroke-dasharray': `${6 / state.zoom} ${4 / state.zoom}`,
+      }));
+    } else {
+      const cls = state.tool === 'calibrar' ? 'calibra-linha' : 'medida-linha';
+      overlay.appendChild(el('polyline', {
+        class: cls, 'stroke-width': traco * 1.3, fill: 'none',
+        points: pts.map(p => `${p.x},${p.y}`).join(' '),
+      }));
+    }
     for (const p of pts) {
       overlay.appendChild(el('circle', { cx: p.x, cy: p.y, r: 3.4 / state.zoom, fill: '#ef4444' }));
     }
