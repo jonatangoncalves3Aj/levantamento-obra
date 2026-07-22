@@ -1,17 +1,56 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#141416"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c1c22"/>
+      <stop offset="1" stop-color="#0d0d10"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.55" r="0.5">
+      <stop offset="0" stop-color="#f97316" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#f97316" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="metal" x1="0.15" y1="0.05" x2="0.9" y2="0.95">
+      <stop offset="0" stop-color="#fdba74"/>
+      <stop offset="0.42" stop-color="#f97316"/>
+      <stop offset="1" stop-color="#b1360b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="115" fill="url(#bg)"/>
+  <circle cx="256" cy="292" r="205" fill="url(#glow)"/>
+
   <!-- Fixação e linha do prumo -->
-  <path d="M234 92 L278 92 L268 128 L244 128 Z" fill="#9c9ca8"/>
-  <rect x="252" y="128" width="8" height="120" rx="4" fill="#9c9ca8"/>
-  <!-- Corpo do prumo (peça de bronze) -->
-  <path d="M256 242
-           C 306 256 322 302 304 336
-           L 256 440
-           L 208 336
-           C 190 302 206 256 256 242 Z" fill="#f97316"/>
-  <!-- Faceta de brilho -->
-  <path d="M256 242 C 230 250 214 280 220 312 L 256 440 Z" fill="#fb923c" opacity="0.5"/>
+  <path d="M234 92 h44 l-9 26 h-26 z" fill="#a9a9b3"/>
+  <rect x="252" y="116" width="8" height="52" rx="4" fill="#8f8f99"/>
+
+  <!-- Cap/rosca do prumo -->
+  <path d="M226 158 h60 l-10 26 h-40 z" fill="#9a3412"/>
+
+  <!-- Corpo do prumo (metal) -->
+  <path d="M256 176
+           C 306 186 330 220 328 262
+           C 326 300 300 342 256 430
+           C 212 342 186 300 184 262
+           C 182 220 206 186 256 176 Z" fill="url(#metal)"/>
+
+  <!-- Brilho (faceta clara à esquerda) -->
+  <path d="M256 182
+           C 224 190 206 220 208 262
+           C 210 296 228 332 256 386
+           C 256 386 236 300 236 262
+           C 236 222 244 198 256 182 Z" fill="#ffedd5" opacity="0.32"/>
+
+  <!-- Sombra à direita (volume) -->
+  <path d="M256 176
+           C 306 186 330 220 328 262
+           C 326 300 300 342 256 430
+           C 286 330 296 296 296 262
+           C 296 222 282 194 256 176 Z" fill="#7c2d12" opacity="0.35"/>
+
+  <!-- Anel/seam de usinagem -->
+  <ellipse cx="256" cy="252" rx="70" ry="12" fill="#7c2d12" opacity="0.28"/>
+
   <!-- Ponta de precisão (alvo azul) -->
-  <line x1="256" y1="440" x2="256" y2="462" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"/>
-  <circle cx="256" cy="466" r="14" fill="none" stroke="#3b82f6" stroke-width="8"/>
+  <line x1="256" y1="424" x2="256" y2="452" stroke="#3b82f6" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="256" cy="458" r="16" fill="none" stroke="#3b82f6" stroke-width="9"/>
+  <circle cx="256" cy="458" r="4" fill="#3b82f6"/>
 </svg>
