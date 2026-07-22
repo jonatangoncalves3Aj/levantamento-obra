@@ -400,12 +400,16 @@ async function analisarPorVisao() {
 async function analisarSimbolosPorVisao(p) {
   const res = $('resultado-analise');
   res.hidden = false;
-  res.textContent = `🤖 Contando símbolos de ${p.disciplina.toLowerCase()} com ${nomeModeloIA()} — pode levar até 1 minuto…`;
+  const comRegiao = !!p.regiaoIA;
+  res.textContent = `🤖 Contando símbolos de ${p.disciplina.toLowerCase()} com ${nomeModeloIA()}` +
+    (comRegiao ? ' (só na região marcada)' : '') + ' — pode levar até 1 minuto…';
   try {
     const { page, largura, altura } = await obterPagina(p);
-    const { legenda, itens } = await analisarSimbolosIA(page, largura, altura, p.disciplina);
+    const { legenda, itens } = await analisarSimbolosIA(page, largura, altura, p.disciplina, p.regiaoIA || null);
     if (!itens.length) {
-      res.textContent = 'A IA não encontrou símbolos de instalação nesta prancha.';
+      res.textContent = comRegiao
+        ? 'A IA não encontrou símbolos dentro da região marcada. Confira se a região cobre a planta baixa.'
+        : 'A IA não encontrou símbolos de instalação nesta prancha.';
       return;
     }
     const porTipo = new Map();
@@ -421,6 +425,7 @@ async function analisarSimbolosPorVisao(p) {
       resumo.push(`${pontos.length}× ${rotulo}`);
     }
     res.textContent = (legenda.length ? `🤖 Legenda lida (${legenda.length} itens). ` : '🤖 ') +
+      (comRegiao ? 'Contei só na região marcada. ' : '') +
       `Contagem: ${resumo.join(' · ')}. Criei medições de contagem com pins na planta — confira e ajuste. ` +
       'Elas entram na Tabela (medições avulsas) e na aba Instalações do XLSX.';
     salvar(); atualizarTudo();
@@ -494,6 +499,20 @@ botoesTool.forEach(b => b.addEventListener('click', () => {
   const t = b.dataset.tool;
   const p = pranchaAtual();
   if (!p) return alert('Abra uma prancha primeiro.');
+  // Região de contagem já existe: OK = redesenhar (substitui), Cancelar = remover
+  if (t === 'regiaoia' && p.regiaoIA && state.tool !== 'regiaoia') {
+    const redesenhar = confirm('Já existe uma região de contagem marcada.\n\n' +
+      'OK = desenhar uma nova (substitui a atual).\n' +
+      'Cancelar = remover a região (voltar a contar a folha inteira).');
+    if (!redesenhar) {
+      delete p.regiaoIA;
+      salvar(); desenharOverlay();
+      const res = $('resultado-analise');
+      res.hidden = false;
+      res.textContent = 'Região de contagem removida — a IA volta a contar a prancha inteira.';
+      return;
+    }
+  }
   if (['lado', 'perimetro', 'linear', 'parede'].includes(t) && !p.escala) {
     return alert('Para medir em metros, defina a escala primeiro (passo 1):\n\n' +
       '• "Calibrar escala": clique nos DOIS extremos de uma cota conhecida da planta e informe o valor real; ou\n' +
@@ -659,7 +678,26 @@ overlay.addEventListener('click', (e) => {
   if (state.tool === 'calibrar' && state.desenho.pontos.length === 2) abrirCalibrar();
   if (state.tool === 'lado' && state.desenho.pontos.length === 2) medirLado();
   if (state.tool === 'pavzona' && state.desenho.pontos.length === 2) abrirZonaPavimento();
+  if (state.tool === 'regiaoia' && state.desenho.pontos.length === 2) definirRegiaoIA();
 });
+
+// Guarda o retângulo (coords base) que restringe a contagem por IA à planta
+// baixa, deixando de fora diagrama unifilar, detalhes e legenda.
+function definirRegiaoIA() {
+  const p = pranchaAtual();
+  const [a, b] = state.desenho.pontos;
+  if (Math.abs(b.x - a.x) < 12 || Math.abs(b.y - a.y) < 12) {
+    cancelarDesenho();
+    return; // clique acidental / retângulo minúsculo
+  }
+  p.regiaoIA = { x1: a.x, y1: a.y, x2: b.x, y2: b.y };
+  setTool(null);
+  salvar(); desenharOverlay();
+  const res = $('resultado-analise');
+  res.hidden = false;
+  res.textContent = '▦ Região de contagem marcada. Agora clique em "Analisar planta" → ' +
+    '"Contar símbolos com IA" e a contagem vai olhar só dentro dela.';
+}
 
 // Reatribui a outro pavimento o que estiver dentro do retângulo marcado
 // (folhas com mais de um pavimento desenhado lado a lado): ambientes pelo

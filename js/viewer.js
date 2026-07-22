@@ -207,10 +207,25 @@ export function desenharOverlay() {
     }
   }
 
+  // Região de contagem por IA (persistida): retângulo verde tracejado
+  if (prancha.regiaoIA) {
+    const r = prancha.regiaoIA;
+    overlay.appendChild(el('rect', {
+      x: Math.min(r.x1, r.x2), y: Math.min(r.y1, r.y2),
+      width: Math.abs(r.x2 - r.x1), height: Math.abs(r.y2 - r.y1),
+      fill: 'rgba(34, 197, 94, .06)', stroke: '#22c55e', 'fill-opacity': 1,
+      'stroke-width': traco * 1.4, 'stroke-dasharray': `${8 / state.zoom} ${5 / state.zoom}`,
+    }));
+    overlay.appendChild(el('text', {
+      class: 'medida-rotulo', fill: '#22c55e',
+      x: Math.min(r.x1, r.x2) + f * .4, y: Math.min(r.y1, r.y2) - f * .4, 'font-size': f,
+    }, '▦ região de contagem (IA)'));
+  }
+
   // Desenho em curso (ferramenta ativa)
   if (state.desenho?.pontos?.length) {
     const pts = state.desenho.pontos;
-    if (state.tool === 'pavzona' && pts.length === 2) {
+    if ((state.tool === 'pavzona' || state.tool === 'regiaoia') && pts.length === 2) {
       // Região de separação de pavimentos: retângulo tracejado
       const [a, b] = pts;
       overlay.appendChild(el('rect', {

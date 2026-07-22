@@ -78,7 +78,7 @@ coordenação de obra completa. Interface 100% em pt-BR.
 
 Modelo de dados: `projeto { pranchas[], pavimentos[], catalogo[], bdi,
 dataInicio/Fim, snapshots[], rdos[] }` → `prancha { pavimento, disciplina,
-escala{pxPorMetro}, ambientes[], medicoes[], pendencias[] }` → `ambiente
+escala{pxPorMetro}, ambientes[], medicoes[], pendencias[], regiaoIA? }` → `ambiente
 { nome, pin{x,y}, area, areaOrigem('planta'|'medida'|'manual'|'ia'), lado,
 perimetro, pdOsso, pdAcab, vaos[], qtd, avanco, tipoInst?, pavimento? }`.
 `ambiente.pavimento` e `medicao.pavimento` são overrides opcionais (folha
@@ -89,6 +89,11 @@ Medições (`prancha.medicoes[]`) têm tipos `linear`, `contagem` e `parede`
 (`{tipo:'parede', classe:'interna'|'externa', pd, pontos[]}` — área =
 comprimento×PD, somada por `totaisParedes()` no store; fontes de orçamento
 `paredeInterna`/`paredeExterna`). `projeto.peDireitoPadrao` é o PD default.
+`prancha.regiaoIA` (opcional, `{x1,y1,x2,y2}` em coords base) restringe a
+contagem de símbolos por IA a um retângulo — folha com planta baixa +
+unifilar + detalhes junto (ferramenta "Região p/ contar"); a IA recebe a
+folha inteira (para a legenda) + o recorte da região (para contar) e o
+`ia.js` mapeia as frações do recorte de volta para coords base.
 Campos novos: adicione migração em `garantirCampos()` no store.
 
 ## Integrações

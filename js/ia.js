@@ -83,10 +83,34 @@ async function paginaParaPNG(page, ladoMax = 2200) {
   return canvas.toDataURL('image/png').split(',')[1];
 }
 
-// Chamada comum à API (imagem + esquema de saída estruturada)
-async function chamarIA(esquema, sistema, pedido, png) {
+// Rasteriza SÓ um retângulo da página (coords base do PDF) em alta resolução.
+// Usa transform para deslocar a região até a origem do canvas do recorte.
+async function regiaoParaPNG(page, regiao, ladoMax = 2000) {
+  const x1 = Math.min(regiao.x1, regiao.x2), y1 = Math.min(regiao.y1, regiao.y2);
+  const larg = Math.abs(regiao.x2 - regiao.x1), alt = Math.abs(regiao.y2 - regiao.y1);
+  const escala = Math.min(ladoMax / Math.max(larg, alt), 4);
+  const vp = page.getViewport({ scale: escala });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(larg * escala);
+  canvas.height = Math.round(alt * escala);
+  await page.render({
+    canvasContext: canvas.getContext('2d'),
+    viewport: vp,
+    transform: [1, 0, 0, 1, -x1 * escala, -y1 * escala],
+  }).promise;
+  return canvas.toDataURL('image/png').split(',')[1];
+}
+
+// Chamada comum à API (uma ou mais imagens + esquema de saída estruturada)
+async function chamarIA(esquema, sistema, pedido, imagens) {
   const chave = lerChaveIA();
   if (!chave) throw new Error('Chave de API não configurada.');
+
+  const pngs = Array.isArray(imagens) ? imagens : [imagens];
+  const content = pngs.map(data => ({
+    type: 'image', source: { type: 'base64', media_type: 'image/png', data },
+  }));
+  content.push({ type: 'text', text: pedido });
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -101,13 +125,7 @@ async function chamarIA(esquema, sistema, pedido, png) {
       max_tokens: 8192,
       output_config: { format: { type: 'json_schema', schema: esquema } },
       system: sistema,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/png', data: png } },
-          { type: 'text', text: pedido },
-        ],
-      }],
+      messages: [{ role: 'user', content }],
     }),
   });
 
@@ -158,7 +176,10 @@ export function disciplinaTemSimbolos(disciplina) {
 
 // Lê a legenda da prancha e conta cada ocorrência de cada símbolo.
 // Retorna { legenda: [nomes], itens: [{rotulo, x, y}] } em coordenadas base.
-export async function analisarSimbolosIA(page, larguraBase, alturaBase, disciplina) {
+// `regiao` (opcional, {x1,y1,x2,y2} em coords base) restringe a CONTAGEM a
+// só aquele retângulo (ex.: só a planta baixa, sem o diagrama unifilar) —
+// a legenda ainda é lida da folha inteira.
+export async function analisarSimbolosIA(page, larguraBase, alturaBase, disciplina, regiao = null) {
   const contexto = DISCIPLINAS_SIMBOLOS[disciplina];
   if (!contexto) throw new Error('Sem análise de símbolos para esta disciplina.');
 
@@ -194,17 +215,37 @@ export async function analisarSimbolosIA(page, larguraBase, alturaBase, discipli
     additionalProperties: false,
   };
 
-  const png = await paginaParaPNG(page);
-  const dados = await chamarIA(
-    esquema,
+  let imagens, pedido, sistema;
+  sistema =
     `Você analisa plantas de instalações ${contexto} brasileiras.\n` +
     '1) Primeiro localize a LEGENDA (quadro de símbolos/convenções) da prancha e liste cada item com o nome EXATAMENTE como escrito nela.\n' +
     '2) Depois localize CADA ocorrência de cada símbolo na área desenhada da planta — um item por ocorrência, com o centro em frações 0–1 da imagem, usando o MESMO nome da legenda.\n' +
     'Se a prancha não tiver legenda, retorne legenda vazia e use nomes curtos e descritivos (ex.: "Tomada baixa", "Ponto de luz no teto").\n' +
-    'Não conte os símbolos desenhados dentro da própria legenda; ignore carimbo, notas e cotas.',
-    'Leia a legenda e conte todos os símbolos de instalação desta prancha.',
-    png,
-  );
+    'Não conte os símbolos desenhados dentro da própria legenda; ignore carimbo, notas e cotas.';
+
+  if (regiao) {
+    // Duas imagens: folha inteira (para a legenda) + recorte só da região a contar.
+    const pngFolha = await paginaParaPNG(page, 1600);
+    const pngRegiao = await regiaoParaPNG(page, regiao);
+    imagens = [pngFolha, pngRegiao];
+    pedido =
+      'A PRIMEIRA imagem é a prancha inteira — use-a APENAS para ler a legenda.\n' +
+      'A SEGUNDA imagem é um recorte ampliado da área que você deve contar (a planta baixa). ' +
+      'Conte os símbolos SOMENTE nesta segunda imagem, ignorando qualquer coisa fora dela ' +
+      '(diagrama unifilar, detalhes, legenda). As coordenadas x/y devem ser frações 0–1 ' +
+      'em relação à SEGUNDA imagem (o recorte).';
+  } else {
+    imagens = await paginaParaPNG(page);
+    pedido = 'Leia a legenda e conte todos os símbolos de instalação desta prancha.';
+  }
+
+  const dados = await chamarIA(esquema, sistema, pedido, imagens);
+
+  // Em modo região, as frações são relativas ao recorte → mapeia p/ coords base.
+  const rx1 = regiao ? Math.min(regiao.x1, regiao.x2) : 0;
+  const ry1 = regiao ? Math.min(regiao.y1, regiao.y2) : 0;
+  const rw = regiao ? Math.abs(regiao.x2 - regiao.x1) : larguraBase;
+  const rh = regiao ? Math.abs(regiao.y2 - regiao.y1) : alturaBase;
 
   return {
     legenda: (dados.legenda || []).map(l => l.item?.trim()).filter(Boolean),
@@ -212,8 +253,8 @@ export async function analisarSimbolosIA(page, larguraBase, alturaBase, discipli
       .filter(i => i.item && i.x >= 0 && i.x <= 1 && i.y >= 0 && i.y <= 1)
       .map(i => ({
         rotulo: i.item.trim(),
-        x: i.x * larguraBase,
-        y: i.y * alturaBase,
+        x: rx1 + i.x * rw,
+        y: ry1 + i.y * rh,
       })),
   };
 }
