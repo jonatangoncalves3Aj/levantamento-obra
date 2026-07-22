@@ -134,6 +134,23 @@ export function totaisRevestimento(proj) {
   return t;
 }
 
+// Símbolos de instalação CONTADOS na planta (medições de contagem — ex.: a
+// IA contou tomadas/pontos numa prancha de elétrica). Somados por rótulo e
+// agrupados por pavimento. Independe de haver ambientes levantados.
+export function totaisContagem(proj) {
+  const porPav = new Map();       // pavimento -> Map(nome -> quantidade)
+  for (const p of proj.pranchas) {
+    for (const m of p.medicoes) {
+      if (m.tipo !== 'contagem' || !m.pontos.length) continue;
+      const pav = m.pavimento || p.pavimento;
+      if (!porPav.has(pav)) porPav.set(pav, new Map());
+      const mp = porPav.get(pav);
+      mp.set(m.nome, (mp.get(m.nome) || 0) + m.pontos.length);
+    }
+  }
+  return porPav;
+}
+
 export const FONTES_REVESTIMENTO = {
   pisoMolhado: 'Piso áreas molhadas (m²)',
   pisoSeco: 'Piso áreas secas (m²)',
@@ -178,16 +195,87 @@ export function renderInstalacoes() {
   if (!scroll || !proj) return;
   scroll.innerHTML = '';
 
-  if (!proj.pranchas.some(p => p.ambientes.length)) {
+  const temAmbientes = proj.pranchas.some(p => p.ambientes.length);
+  const contagem = totaisContagem(proj);
+
+  if (!temAmbientes && !contagem.size) {
     const p = document.createElement('p');
     p.className = 'dica';
     p.style.padding = '20px';
-    p.textContent = 'Nenhum ambiente levantado ainda — importe pranchas e analise a planta primeiro.';
+    p.textContent = 'Nada quantificado ainda. Para instalações há dois caminhos: ' +
+      'em planta de arquitetura, levante os ambientes (Analisar planta / medir) e as ' +
+      'quantidades saem por estimativa; em planta de elétrica/hidráulica, conte os ' +
+      'símbolos (Analisar com IA → contar símbolos, ou a ferramenta Contagem).';
     scroll.appendChild(p);
     return;
   }
 
+  if (contagem.size) renderContagem(proj, contagem);
+  if (temAmbientes) renderParametrico(proj);
+}
+
+// Símbolos contados na planta (tomadas, pontos de luz, água, esgoto…),
+// somados por rótulo e pavimento.
+function renderContagem(proj, contagem) {
+  const h = document.createElement('h3');
+  h.className = 'tabela-sub';
+  h.style.marginTop = '4px';
+  h.textContent = 'Instalações contadas na planta';
+  scroll.appendChild(h);
+
+  const tabela = document.createElement('table');
+  tabela.className = 'quant';
+  tabela.style.maxWidth = '560px';
+  const tbody = document.createElement('tbody');
+  let totalGeral = 0;
+
+  for (const pav of ordenarPavimentos(proj, [...contagem.keys()])) {
+    const itens = contagem.get(pav);
+    const trg = document.createElement('tr');
+    trg.className = 'grupo';
+    const tdg = document.createElement('td');
+    tdg.colSpan = 2;
+    tdg.textContent = pav;
+    trg.appendChild(tdg);
+    tbody.appendChild(trg);
+
+    for (const [nome, qtd] of itens) {
+      totalGeral += qtd;
+      const tr = document.createElement('tr');
+      const td1 = celTexto(nome);
+      td1.style.textAlign = 'left';
+      tr.appendChild(td1);
+      tr.appendChild(celTexto(`${qtd} un`));
+      tbody.appendChild(tr);
+    }
+  }
+  const trt = document.createElement('tr');
+  trt.className = 'total';
+  const tdT = celTexto('Total contado');
+  tdT.style.textAlign = 'left';
+  trt.appendChild(tdT);
+  trt.appendChild(celTexto(`${totalGeral} un`));
+  tbody.appendChild(trt);
+
+  tabela.appendChild(tbody);
+  scroll.appendChild(tabela);
+
+  const dica = document.createElement('p');
+  dica.className = 'dica';
+  dica.style.margin = '10px 2px 20px';
+  dica.textContent = 'Contagem real dos símbolos marcados na planta (pela IA ou pela ferramenta Contagem). ' +
+    'Ajuste os pontos na aba Planta (arraste ou Alt+clique para excluir).';
+  scroll.appendChild(dica);
+}
+
+// Estimativa paramétrica de instalações e revestimentos a partir dos ambientes.
+function renderParametrico(proj) {
   const chaves = Object.keys(ITENS_INSTALACAO);
+  const hEst = document.createElement('h3');
+  hEst.className = 'tabela-sub';
+  hEst.style.marginTop = '4px';
+  hEst.textContent = 'Estimativa por ambiente (paramétrica)';
+  scroll.appendChild(hEst);
   const tabela = document.createElement('table');
   tabela.className = 'quant';
   const thead = document.createElement('thead');
