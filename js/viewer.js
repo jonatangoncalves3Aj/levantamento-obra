@@ -217,11 +217,15 @@ export function desenharOverlay() {
       }
     }
     if (m.tipo === 'contagem') {
-      for (const p of m.pontos) {
-        overlay.appendChild(el('circle', {
+      m.pontos.forEach((p, i) => {
+        // Sem ferramenta ativa, cada ponto vira alça: arraste p/ mover,
+        // Alt+clique p/ excluir só aquele ponto.
+        const attrs = {
           class: 'ponto-contagem', cx: p.x, cy: p.y, r: 5 / state.zoom, 'stroke-width': traco,
-        }));
-      }
+        };
+        if (!state.tool) { attrs['data-vertice'] = `${m.id}:${i}`; attrs.cursor = 'move'; }
+        overlay.appendChild(el('circle', attrs));
+      });
       if (m.pontos.length) {
         const p0 = m.pontos[0];
         overlay.appendChild(el('text', {

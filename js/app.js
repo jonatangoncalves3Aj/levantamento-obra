@@ -696,13 +696,21 @@ let arrasto = null; // { ambiente, dx, dy, moveu } | { vertice: {medicao, i}, mo
 overlay.addEventListener('pointerdown', (e) => {
   if (state.tool) return;
   const p = pranchaAtual();
-  // Alça de vértice de parede: arrastar corrige o traçado
+  // Alça de vértice (parede / linear / contagem): arrastar corrige o ponto
   const alca = e.target.closest('[data-vertice]');
   if (alca && p) {
     const [mid, idx] = alca.dataset.vertice.split(':');
     const m = p.medicoes.find(x => x.id === mid);
     if (!m) return;
-    arrasto = { vertice: { medicao: m, i: Number(idx) }, moveu: false };
+    const i = Number(idx);
+    // Alt+clique num ponto de contagem exclui só aquele ponto
+    if (e.altKey && m.tipo === 'contagem') {
+      m.pontos.splice(i, 1);
+      if (!m.pontos.length) p.medicoes = p.medicoes.filter(x => x.id !== m.id);
+      salvar(); renderSidebar(); desenharOverlay();
+      return;
+    }
+    arrasto = { vertice: { medicao: m, i }, moveu: false };
     overlay.setPointerCapture(e.pointerId);
     return;
   }
@@ -1036,6 +1044,30 @@ function abrirParede(pts) {
   $('dlg-parede-cancelar').onclick = () => { dlg.close(); cancelarDesenho(); setTool(null); };
 }
 
+// Fecha o contorno de uma parede (polilinha ≥3 vértices) e cria um ambiente
+// com área (shoelace) e perímetro do polígono fechado — útil quando se traça
+// o contorno externo/de um cômodo com a ferramenta Parede.
+function fecharParedeComoComodo(p, m) {
+  if (!p.escala) return alert('Defina a escala primeiro para calcular a área do cômodo.');
+  const ppm = p.escala.pxPorMetro;
+  const pts = m.pontos;
+  const area = +(areaPoligono(pts) / (ppm * ppm)).toFixed(2);
+  const perim = +(perimetroPoligono(pts) / ppm).toFixed(2);   // já fecha o polígono
+  if (!(area > 0)) return alert('O contorno não forma uma área fechada válida.');
+  const nome = prompt(`Nome do cômodo?\n\nÁrea ${fmt(area)} m² · perímetro ${fmt(perim)} m`, m.nome || '');
+  if (nome === null) return;
+  const centro = {
+    x: pts.reduce((s, q) => s + q.x, 0) / pts.length,
+    y: pts.reduce((s, q) => s + q.y, 0) / pts.length,
+  };
+  const amb = novoAmbiente((nome || 'CÔMODO').toUpperCase(), centro.x, centro.y);
+  amb.area = area; amb.areaOrigem = 'medida';
+  amb.perimetro = perim; amb.poligono = pts.map(q => ({ ...q }));
+  amb.pavimento = m.pavimento ?? null;
+  p.ambientes.push(amb);
+  salvar(); atualizarTudo();
+}
+
 /* =============== Sidebar: cards de ambientes e medições =============== */
 
 function selecionarAmbiente(id) {
@@ -1126,6 +1158,14 @@ function renderSidebar() {
           salvar(); renderSidebar(); desenharOverlay();
         });
         linha.appendChild(troca);
+        // Contorno fechado (≥3 vértices) vira um cômodo com área e perímetro
+        if (m.pontos.length >= 3) {
+          const fechar = document.createElement('button');
+          fechar.textContent = '⬠';
+          fechar.title = 'Fechar como cômodo (cria ambiente com área e perímetro)';
+          fechar.addEventListener('click', () => fecharParedeComoComodo(p, m));
+          linha.appendChild(fechar);
+        }
       }
       const del = document.createElement('button');
       del.textContent = '×';
