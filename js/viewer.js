@@ -194,6 +194,17 @@ export function desenharOverlay() {
       overlay.appendChild(el('text', {
         class: 'medida-rotulo', x: fim.x + f * .4, y: fim.y - f * .4, 'font-size': f,
       }, `${m.classe === 'externa' ? 'Ext' : 'Int'} ${areaM !== null ? fmt(areaM) + ' m²' : ''}`));
+      // Alças de edição: arraste um vértice para corrigir o traçado
+      // (só sem ferramenta ativa, para não competir com os cliques de medir)
+      if (!state.tool) {
+        m.pontos.forEach((p, i) => {
+          overlay.appendChild(el('circle', {
+            'data-vertice': `${m.id}:${i}`, cx: p.x, cy: p.y, r: 5 / state.zoom,
+            fill: '#fff', stroke: cor, 'stroke-width': 2 / state.zoom,
+            cursor: 'move', opacity: 0.9,
+          }));
+        });
+      }
     }
     if (m.tipo === 'contagem') {
       for (const p of m.pontos) {

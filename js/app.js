@@ -474,8 +474,9 @@ async function tracarParedesPorVisao() {
     if (temLinhas) state.destacarLinhas = true, $('btn-destacar-linhas')?.classList.add('ativo');
     res.textContent = `🤖 Tracei ${paredes.length} parede(s) (rascunho). ` +
       (temLinhas ? `${refinados}/${total} vértices grudados nos cantos reais do CAD. ` : 'Prancha sem geometria vetorial — o traçado é aproximado. ') +
-      'Elas viraram medições de parede (PD = padrão do projeto). Confira na lista de Medições e apague com o × as que estiverem erradas; ' +
-      'para refazer um trecho com precisão, use a ferramenta Parede com o destaque de linhas ligado (snap).';
+      'Elas viraram medições de parede (PD = padrão do projeto). Para corrigir: arraste as bolinhas ' +
+      '(vértices) na planta — com o destaque ligado elas grudam nos cantos —, troque interna/externa ' +
+      'com o ⇄ na lista de Medições e apague com o × o que não for parede.';
     salvar(); atualizarTudo(); desenharOverlay();
   } catch (err) {
     res.textContent = 'Falha ao traçar paredes: ' + err.message;
@@ -687,12 +688,23 @@ vpEl.addEventListener('pointerup', fimPan);
 vpEl.addEventListener('pointerleave', fimPan);
 
 /* Clique / arraste no overlay */
-let arrasto = null; // { ambiente, dx, dy, moveu }
+let arrasto = null; // { ambiente, dx, dy, moveu } | { vertice: {medicao, i}, moveu }
 
 overlay.addEventListener('pointerdown', (e) => {
+  if (state.tool) return;
+  const p = pranchaAtual();
+  // Alça de vértice de parede: arrastar corrige o traçado
+  const alca = e.target.closest('[data-vertice]');
+  if (alca && p) {
+    const [mid, idx] = alca.dataset.vertice.split(':');
+    const m = p.medicoes.find(x => x.id === mid);
+    if (!m) return;
+    arrasto = { vertice: { medicao: m, i: Number(idx) }, moveu: false };
+    overlay.setPointerCapture(e.pointerId);
+    return;
+  }
   const alvo = e.target.closest('[data-ambiente]');
-  if (alvo && !state.tool) {
-    const p = pranchaAtual();
+  if (alvo && p) {
     const amb = p.ambientes.find(a => a.id === alvo.dataset.ambiente);
     if (!amb) return;
     const pt = pontoDoEvento(e);
@@ -703,6 +715,20 @@ overlay.addEventListener('pointerdown', (e) => {
 
 let rafHover = 0;
 overlay.addEventListener('pointermove', (e) => {
+  if (arrasto?.vertice) {
+    const p = pranchaAtual();
+    const pt = pontoDoEvento(e);
+    // Com o destaque ligado, o vértice arrastado também gruda no canto real
+    if (state.destacarLinhas && p) {
+      const s = snapPonto(p.id, pt, 12 / state.zoom);
+      if (s) { pt.x = s.x; pt.y = s.y; }
+    }
+    const { medicao, i } = arrasto.vertice;
+    medicao.pontos[i] = { x: pt.x, y: pt.y };
+    arrasto.moveu = true;
+    desenharOverlay();
+    return;
+  }
   if (arrasto) {
     const pt = pontoDoEvento(e);
     arrasto.ambiente.pin.x = pt.x + arrasto.dx;
@@ -728,7 +754,10 @@ overlay.addEventListener('pointermove', (e) => {
 
 overlay.addEventListener('pointerup', (e) => {
   if (!arrasto) return;
-  if (arrasto.moveu) salvar();
+  if (arrasto.vertice) {
+    // Área da parede muda com o vértice → atualiza cards e tabela
+    if (arrasto.moveu) { salvar(); renderSidebar(); }
+  } else if (arrasto.moveu) salvar();
   else selecionarAmbiente(arrasto.ambiente.id);
   arrasto = null;
 });
@@ -1084,6 +1113,17 @@ function renderSidebar() {
       const valorMed = document.createElement('strong');
       valorMed.textContent = valor;
       linha.append(rotuloMed, valorMed);
+      if (m.tipo === 'parede') {
+        const troca = document.createElement('button');
+        troca.textContent = '⇄';
+        troca.title = m.classe === 'externa'
+          ? 'Trocar para parede interna' : 'Trocar para parede externa';
+        troca.addEventListener('click', () => {
+          m.classe = m.classe === 'externa' ? 'interna' : 'externa';
+          salvar(); renderSidebar(); desenharOverlay();
+        });
+        linha.appendChild(troca);
+      }
       const del = document.createElement('button');
       del.textContent = '×';
       del.title = 'Excluir medição';
