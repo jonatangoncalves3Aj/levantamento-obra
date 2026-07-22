@@ -1,14 +1,16 @@
-# Levantamento de Obra — guia do projeto
+# Prumo IA — guia do projeto
 
-App web (PWA) de levantamento de quantitativos de obra a partir de plantas em
-PDF, inspirado num app visto em reel do Instagram e expandido para
-coordenação de obra completa. Interface 100% em pt-BR.
+**Prumo IA** (antes "Levantamento de Obra") — app web (PWA) de levantamento de
+quantitativos de obra a partir de plantas em PDF, inspirado num app visto em
+reel do Instagram e expandido para coordenação de obra completa. Interface
+100% em pt-BR. O nome só mudou na marca (título, manifest, ícone); o
+repositório e a URL do GitHub Pages continuam `levantamento-obra`.
 
 - **App no ar:** https://jonatangoncalves3aj.github.io/levantamento-obra/
 - **Repositório:** jonatangoncalves3Aj/levantamento-obra (branch `main`)
 - **App irmão:** jonatangoncalves3Aj/dimensionamento-saneamento (dimensionamento
   de saneamento — projeto separado, não misturar)
-- **Versão atual:** 3.4 (o rodapé da sidebar mostra a versão — atualize a cada release)
+- **Versão atual:** 4.8 (o rodapé da sidebar mostra a versão — atualize a cada release)
 
 ## O que o app faz
 

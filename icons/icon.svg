@@ -1,11 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#141416"/>
-  <path d="M120 392 L120 160 L168 160 L168 344 L352 344 L352 392 Z" fill="#f97316"/>
-  <path d="M196 160 L392 160 L392 208 L244 208 L244 316 L196 316 Z" fill="#3b82f6"/>
-  <g fill="#141416">
-    <rect x="132" y="196" width="14" height="6"/><rect x="132" y="236" width="22" height="6"/>
-    <rect x="132" y="276" width="14" height="6"/><rect x="132" y="316" width="22" height="6"/>
-    <rect x="300" y="172" width="6" height="14"/><rect x="260" y="172" width="6" height="22"/>
-    <rect x="340" y="172" width="6" height="22"/>
-  </g>
+  <rect width="512" height="512" rx="112" fill="#141416"/>
+  <!-- Fixação e linha do prumo -->
+  <path d="M234 92 L278 92 L268 128 L244 128 Z" fill="#9c9ca8"/>
+  <rect x="252" y="128" width="8" height="120" rx="4" fill="#9c9ca8"/>
+  <!-- Corpo do prumo (peça de bronze) -->
+  <path d="M256 242
+           C 306 256 322 302 304 336
+           L 256 440
+           L 208 336
+           C 190 302 206 256 256 242 Z" fill="#f97316"/>
+  <!-- Faceta de brilho -->
+  <path d="M256 242 C 230 250 214 280 220 312 L 256 440 Z" fill="#fb923c" opacity="0.5"/>
+  <!-- Ponta de precisão (alvo azul) -->
+  <line x1="256" y1="440" x2="256" y2="462" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="256" cy="466" r="14" fill="none" stroke="#3b82f6" stroke-width="8"/>
 </svg>

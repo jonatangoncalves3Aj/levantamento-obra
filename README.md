@@ -1,6 +1,6 @@
-# Levantamento de Obra
+# Prumo IA
 
-App web para **levantamento de quantitativos de obra a partir de plantas em PDF** — 100% no navegador, offline-first (PWA), sem enviar nenhum arquivo para servidor.
+**Prumo IA** — app web para **levantamento de quantitativos de obra a partir de plantas em PDF**, com IA de visão e medição precisa. 100% no navegador, offline-first (PWA), sem enviar nenhum arquivo para servidor.
 
 **Acesse:** https://jonatangoncalves3aj.github.io/levantamento-obra/
 
