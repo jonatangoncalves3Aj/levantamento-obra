@@ -18,8 +18,9 @@ import {
   obterPagina, esquecerPagina, contarPaginas,
 } from './viewer.js';
 import { analisarPlanta, detectarEscalaCarimbo, inspecionarTexto } from './deteccao.js';
+import { extrairSegmentos, snapPonto, linhasCache, esquecerLinhas } from './linhas.js';
 import {
-  analisarComIA, analisarSimbolosIA, disciplinaTemSimbolos,
+  analisarComIA, analisarSimbolosIA, tracarParedesIA, disciplinaTemSimbolos,
   iaConfigurada, lerChaveIA, salvarChaveIA,
   MODELOS_IA, lerModeloIA, salvarModeloIA, nomeModeloIA,
 } from './ia.js';
@@ -142,6 +143,7 @@ function renderAbas() {
       if (!confirm(`Remover a prancha "${p.pavimento}" e suas medições?`)) return;
       state.projeto.pranchas = state.projeto.pranchas.filter(x => x.id !== p.id);
       esquecerPagina(p.id);
+      esquecerLinhas(p.id);
       if (state.pranchaAtualId === p.id) state.pranchaAtualId = state.projeto.pranchas[0]?.id || null;
       salvar(); atualizarTudo();
     });
@@ -149,6 +151,9 @@ function renderAbas() {
     aba.addEventListener('click', () => {
       state.pranchaAtualId = p.id;
       state.ambienteSelId = null;
+      state.destacarLinhas = false;   // o destaque/snap é por prancha
+      state.snapHover = null;
+      $('btn-destacar-linhas')?.classList.remove('ativo');
       cancelarDesenho();
       atualizarTudo();
     });
@@ -434,7 +439,51 @@ async function analisarSimbolosPorVisao(p) {
   }
 }
 
+// IA traça as paredes (rascunho) e o snap gruda cada vértice no canto real.
+async function tracarParedesPorVisao() {
+  const p = pranchaAtual();
+  if (!p) return alert('Abra uma prancha primeiro.');
+  if (!p.escala) return alert('Defina a escala primeiro (passo 1) para as paredes saírem em metros.');
+  if (!iaConfigurada()) return abrirConfigIA(tracarParedesPorVisao);
+  const res = $('resultado-analise');
+  res.hidden = false;
+  res.textContent = `🤖 Traçando as paredes com ${nomeModeloIA()} — pode levar até 1 minuto…`;
+  try {
+    const { page, largura, altura } = await obterPagina(p);
+    const paredes = await tracarParedesIA(page, largura, altura, p.regiaoIA || null);
+    if (!paredes.length) {
+      res.textContent = 'A IA não identificou paredes nesta prancha.';
+      return;
+    }
+    // Refina: se a prancha for vetorial, gruda cada vértice no canto real (snap).
+    let refinados = 0, total = 0;
+    let temLinhas = false;
+    try { temLinhas = await garantirLinhas(p); } catch { /* sem geometria vetorial */ }
+    for (const par of paredes) {
+      for (const v of par.pontos) {
+        total++;
+        if (temLinhas) {
+          const s = snapPonto(p.id, v, 18);   // raio generoso: rascunho da IA é aproximado
+          if (s) { v.x = s.x; v.y = s.y; if (s.tipo === 'canto') refinados++; }
+        }
+      }
+    }
+    for (const par of paredes) {
+      p.medicoes.push({ id: uid(), tipo: 'parede', classe: par.classe, pd: state.projeto.peDireitoPadrao || 2.8, pontos: par.pontos, nome: 'Parede (IA)' });
+    }
+    if (temLinhas) state.destacarLinhas = true, $('btn-destacar-linhas')?.classList.add('ativo');
+    res.textContent = `🤖 Tracei ${paredes.length} parede(s) (rascunho). ` +
+      (temLinhas ? `${refinados}/${total} vértices grudados nos cantos reais do CAD. ` : 'Prancha sem geometria vetorial — o traçado é aproximado. ') +
+      'Elas viraram medições de parede (PD = padrão do projeto). Confira na lista de Medições e apague com o × as que estiverem erradas; ' +
+      'para refazer um trecho com precisão, use a ferramenta Parede com o destaque de linhas ligado (snap).';
+    salvar(); atualizarTudo(); desenharOverlay();
+  } catch (err) {
+    res.textContent = 'Falha ao traçar paredes: ' + err.message;
+  }
+}
+
 $('btn-analisar-ia').addEventListener('click', analisarPorVisao);
+$('btn-parede-ia').addEventListener('click', tracarParedesPorVisao);
 $('lnk-ia-chave').addEventListener('click', (e) => { e.preventDefault(); abrirConfigIA(); });
 
 $('btn-inst-xlsx').addEventListener('click', exportarXLSX);
@@ -526,6 +575,46 @@ function cancelarDesenho(redesenhar = true) {
   if (redesenhar) desenharOverlay();
 }
 
+// Extrai (uma vez) a geometria vetorial da prancha para destaque + snap.
+async function garantirLinhas(p) {
+  if (linhasCache(p.id)) return true;
+  const { page } = await obterPagina(p);
+  const info = await extrairSegmentos(page, p.id);
+  return info.segs.length > 0;
+}
+
+// Liga/desliga o destaque das linhas do CAD (e o snap junto).
+$('btn-destacar-linhas').addEventListener('click', async () => {
+  const p = pranchaAtual();
+  if (!p) return alert('Abra uma prancha primeiro.');
+  const btn = $('btn-destacar-linhas');
+  if (state.destacarLinhas) {
+    state.destacarLinhas = false;
+    state.snapHover = null;
+    btn.classList.remove('ativo');
+    desenharOverlay();
+    return;
+  }
+  btn.disabled = true;
+  const rotulo = btn.textContent;
+  btn.textContent = 'Lendo linhas do PDF…';
+  try {
+    const ok = await garantirLinhas(p);
+    if (!ok) {
+      alert('Não encontrei linhas vetoriais nesta prancha — provavelmente é uma planta escaneada (imagem). O destaque/snap só funciona em PDF vetorial (exportado do CAD).');
+      return;
+    }
+    state.destacarLinhas = true;
+    btn.classList.add('ativo');
+    desenharOverlay();
+  } catch (err) {
+    alert('Falha ao ler as linhas: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = rotulo;
+  }
+});
+
 function digitando(e) {
   return ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) ||
     document.querySelector('dialog[open]');
@@ -612,13 +701,29 @@ overlay.addEventListener('pointerdown', (e) => {
   }
 });
 
+let rafHover = 0;
 overlay.addEventListener('pointermove', (e) => {
-  if (!arrasto) return;
-  const pt = pontoDoEvento(e);
-  arrasto.ambiente.pin.x = pt.x + arrasto.dx;
-  arrasto.ambiente.pin.y = pt.y + arrasto.dy;
-  arrasto.moveu = true;
-  desenharOverlay();
+  if (arrasto) {
+    const pt = pontoDoEvento(e);
+    arrasto.ambiente.pin.x = pt.x + arrasto.dx;
+    arrasto.ambiente.pin.y = pt.y + arrasto.dy;
+    arrasto.moveu = true;
+    desenharOverlay();
+    return;
+  }
+  // Prévia do snap: mostra onde o clique vai grudar (canto/linha)
+  if (!state.destacarLinhas || !['lado', 'perimetro', 'linear', 'calibrar', 'parede'].includes(state.tool)) return;
+  if (rafHover) return;
+  rafHover = requestAnimationFrame(() => {
+    rafHover = 0;
+    const p = pranchaAtual();
+    if (!p) return;
+    const pt = pontoDoEvento(e);
+    const s = snapPonto(p.id, pt, 12 / state.zoom);
+    const antes = state.snapHover;
+    state.snapHover = s;
+    if (antes || s) desenharOverlay();
+  });
 });
 
 overlay.addEventListener('pointerup', (e) => {
@@ -663,10 +768,20 @@ overlay.addEventListener('click', (e) => {
 
   // calibrar / lado / perimetro / linear acumulam pontos
   if (!state.desenho) state.desenho = { pontos: [] };
+
+  // Snap nas linhas do CAD: se o destaque de linhas estiver ligado, gruda o
+  // clique no canto/linha real mais próximo (perímetro preciso). Tem
+  // prioridade sobre o snap ortogonal.
+  let grudou = false;
+  if (state.destacarLinhas && ['lado', 'perimetro', 'linear', 'calibrar', 'parede'].includes(state.tool)) {
+    const s = snapPonto(p.id, pt, 12 / state.zoom);
+    if (s) { pt.x = s.x; pt.y = s.y; grudou = s.tipo === 'canto'; }
+  }
+
   // Snap ortogonal: quase-horizontal/vertical em relação ao ponto anterior
-  // (ou sempre, com Shift pressionado)
+  // (ou sempre, com Shift pressionado). Pulado quando já grudou num canto.
   const ant = state.desenho.pontos[state.desenho.pontos.length - 1];
-  if (ant && ['perimetro', 'linear', 'calibrar', 'parede'].includes(state.tool)) {
+  if (!grudou && ant && ['perimetro', 'linear', 'calibrar', 'parede'].includes(state.tool)) {
     const dx = pt.x - ant.x, dy = pt.y - ant.y;
     const forcar = e.shiftKey;
     if (Math.abs(dy) < (forcar ? Math.abs(dx) : Math.abs(dx) * 0.12)) pt.y = ant.y;

@@ -16,8 +16,10 @@ coordenação de obra completa. Interface 100% em pt-BR.
    pavimento e disciplina), lê ambientes da camada de texto (nome, área, PD),
    ou por **IA de visão** quando escaneada; calibra escala (cota ou carimbo);
    mede lado/perímetro/linear/contagem com snap ortogonal; pins arrastáveis;
-   pendências de compatibilização; **sobreposição** translúcida de outra
-   disciplina (mesa de luz).
+   **destaca as linhas reais do CAD** e faz as ferramentas grudarem (snap) nos
+   cantos/linhas exatos (`linhas.js`) — perímetro preciso; a **IA traça as
+   paredes** em rascunho, refinado pelo snap; pendências de compatibilização;
+   **sobreposição** translúcida de outra disciplina (mesa de luz).
 2. **Tabela**: quantitativos por pavimento (paredes com desconto de vãos:
    porta/correr desconta sempre, janela só se > 2,00 m²), CSV/XLSX/PDF.
 3. **Orçamento**: serviços com quantidades vivas do levantamento, curva ABC,
@@ -64,7 +66,8 @@ coordenação de obra completa. Interface 100% em pt-BR.
 | `app.js` | módulo principal: inicialização, abas, importação, ferramentas de desenho, sidebar/cards, vistas, PWA, diálogos (nuvem, IA), atalhos |
 | `store.js` | estado global, modelo de dados, persistência, histórico (undo), multi-projeto, export/import .json com PDFs embutidos |
 | `viewer.js` | render do PDF (com cancelamento), overlay SVG (pins, medições, pendências), sobreposição de disciplina, zoom/ajuste |
-| `deteccao.js` | heurística da camada de texto: ambientes (nome/área/PD) e escala do carimbo |
+| `deteccao.js` | heurística da camada de texto: ambientes (nome/área/PD) e escala do carimbo; `inspecionarTexto()` (tem texto? é instalação?) |
+| `linhas.js` | geometria vetorial real do PDF (reconstruída da lista de operadores do pdf.js): destaque das linhas do CAD + **snap** das ferramentas de medição nos cantos/linhas exatos (`extrairSegmentos`/`snapPonto`, índice espacial de cantos, cache por prancha). Só PDF vetorial |
 | `ia.js` | Anthropic API direto do navegador (modelo escolhido pelo usuário via `MODELOS_IA`/`lerModeloIA`, default `claude-haiku-4-5` = mais barato; saída JSON Schema, header `anthropic-dangerous-direct-browser-access`): ambientes por visão e contagem de símbolos por disciplina. Chave+modelo em `localStorage['levantamento:ia']` = `{chave, modelo}` |
 | `calc.js` | `num`/`fmt` BR, distâncias, shoelace, escala (72/0,0254 pt por metro), `calcAmbiente` (paredes e desconto de vãos) |
 | `tabela.js` | vista Tabela + CSV |

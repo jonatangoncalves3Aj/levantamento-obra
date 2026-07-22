@@ -162,6 +162,80 @@ export async function analisarComIA(page, larguraBase, alturaBase) {
     }));
 }
 
+/* ---------- Traçado das paredes por visão (rascunho, refinado por snap) ---------- */
+
+// A IA devolve as paredes como polilinhas (eixo de cada parede). É um
+// rascunho: as coordenadas de visão não são exatas — no app cada vértice é
+// grudado no canto real do CAD (snap) quando a prancha é vetorial.
+export async function tracarParedesIA(page, larguraBase, alturaBase, regiao = null) {
+  const esquema = {
+    type: 'object',
+    properties: {
+      paredes: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            classe: { type: 'string', enum: ['interna', 'externa'], description: 'externa se for parede de fachada/perímetro externo; interna nas divisórias' },
+            pontos: {
+              type: 'array',
+              description: 'Vértices do eixo da parede, em ordem, como frações 0–1 da imagem',
+              items: {
+                type: 'object',
+                properties: {
+                  x: { type: 'number', description: 'fração 0–1 da largura' },
+                  y: { type: 'number', description: 'fração 0–1 da altura (0 = topo)' },
+                },
+                required: ['x', 'y'],
+                additionalProperties: false,
+              },
+            },
+          },
+          required: ['classe', 'pontos'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['paredes'],
+    additionalProperties: false,
+  };
+
+  let imagens, pedido;
+  const sistema =
+    'Você analisa plantas baixas de arquitetura brasileiras e traça o EIXO de cada parede.\n' +
+    'Trace as paredes como polilinhas seguindo o meio de cada parede (linha de centro). ' +
+    'Marque como "externa" as paredes do contorno externo (fachada) e "interna" as divisórias. ' +
+    'Priorize as paredes principais; não trace móveis, cotas, textos nem esquadrias. ' +
+    'Dê os vértices em ordem, como frações 0–1 da imagem.';
+
+  if (regiao) {
+    const pngFolha = await paginaParaPNG(page, 1600);
+    const pngRegiao = await regiaoParaPNG(page, regiao);
+    imagens = [pngFolha, pngRegiao];
+    pedido = 'A PRIMEIRA imagem é a prancha inteira (contexto). A SEGUNDA é o recorte a traçar. ' +
+      'Trace as paredes SOMENTE da segunda imagem, com coordenadas em frações 0–1 dela.';
+  } else {
+    imagens = await paginaParaPNG(page);
+    pedido = 'Trace o eixo de cada parede desta planta baixa.';
+  }
+
+  const dados = await chamarIA(esquema, sistema, pedido, imagens);
+
+  const rx1 = regiao ? Math.min(regiao.x1, regiao.x2) : 0;
+  const ry1 = regiao ? Math.min(regiao.y1, regiao.y2) : 0;
+  const rw = regiao ? Math.abs(regiao.x2 - regiao.x1) : larguraBase;
+  const rh = regiao ? Math.abs(regiao.y2 - regiao.y1) : alturaBase;
+
+  return (dados.paredes || [])
+    .map(p => ({
+      classe: p.classe === 'externa' ? 'externa' : 'interna',
+      pontos: (p.pontos || [])
+        .filter(v => v.x >= 0 && v.x <= 1 && v.y >= 0 && v.y <= 1)
+        .map(v => ({ x: rx1 + v.x * rw, y: ry1 + v.y * rh })),
+    }))
+    .filter(p => p.pontos.length >= 2);
+}
+
 /* ---------- Contagem de símbolos pela LEGENDA (pranchas de instalações) ---------- */
 
 const DISCIPLINAS_SIMBOLOS = {

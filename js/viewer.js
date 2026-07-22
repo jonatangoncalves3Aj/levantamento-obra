@@ -3,6 +3,7 @@
 import * as pdfjsLib from '../vendor/pdf.min.mjs';
 import { state, pranchaAtual, lerPdf } from './store.js';
 import { fmt, num, dist, comprimentoPolilinha, perimetroPoligono } from './calc.js';
+import { linhasCache } from './linhas.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('../vendor/pdf.worker.min.mjs', import.meta.url).href;
 
@@ -156,6 +157,18 @@ export function desenharOverlay() {
   const f = 12 / state.zoom;            // fonte com tamanho constante na tela
   const traco = 1.6 / state.zoom;
 
+  // Destaque das linhas do CAD (por baixo de tudo): linhas longas em ciano
+  if (state.destacarLinhas) {
+    const info = linhasCache(prancha.id);
+    if (info) {
+      const g = el('g', { stroke: '#06b6d4', 'stroke-width': traco * 0.9, opacity: 0.55 });
+      for (const s of info.longos) {
+        g.appendChild(el('line', { x1: s.ax, y1: s.ay, x2: s.bx, y2: s.by }));
+      }
+      overlay.appendChild(g);
+    }
+  }
+
   // Medições avulsas salvas (linear / contagem)
   for (const m of prancha.medicoes) {
     if (m.tipo === 'linear' && m.pontos.length > 1) {
@@ -243,6 +256,23 @@ export function desenharOverlay() {
     }
     for (const p of pts) {
       overlay.appendChild(el('circle', { cx: p.x, cy: p.y, r: 3.4 / state.zoom, fill: '#ef4444' }));
+    }
+  }
+
+  // Indicador de snap (prévia de onde o clique vai grudar)
+  if (state.destacarLinhas && state.snapHover) {
+    const s = state.snapHover;
+    if (s.tipo === 'canto') {
+      const r = 5 / state.zoom;
+      overlay.appendChild(el('rect', {
+        x: s.x - r, y: s.y - r, width: r * 2, height: r * 2,
+        fill: 'none', stroke: '#ec4899', 'stroke-width': 2 / state.zoom,
+      }));
+    } else {
+      overlay.appendChild(el('circle', {
+        cx: s.x, cy: s.y, r: 4.5 / state.zoom,
+        fill: 'none', stroke: '#ec4899', 'stroke-width': 2 / state.zoom,
+      }));
     }
   }
 
