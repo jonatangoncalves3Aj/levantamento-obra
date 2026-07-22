@@ -19,6 +19,7 @@ import {
 } from './viewer.js';
 import { analisarPlanta, detectarEscalaCarimbo, inspecionarTexto } from './deteccao.js';
 import { extrairSegmentos, snapPonto, linhasCache, esquecerLinhas } from './linhas.js';
+import { recursoPro, abrirUpsell, atualizarSeloPlano, planoAtual } from './conta.js';
 import {
   analisarComIA, analisarSimbolosIA, tracarParedesIA, disciplinaTemSimbolos,
   iaConfigurada, lerChaveIA, salvarChaveIA,
@@ -327,7 +328,7 @@ $('btn-analisar').addEventListener('click', async () => {
       const btn = document.createElement('button');
       btn.className = 'btn-mini';
       btn.textContent = ehInst ? '🤖 Contar símbolos com IA' : '🤖 Analisar com IA (visão)';
-      btn.addEventListener('click', analisarPorVisao);
+      btn.addEventListener('click', () => recursoPro('ia', analisarPorVisao));
       res.appendChild(btn);
       return;
     }
@@ -486,9 +487,18 @@ async function tracarParedesPorVisao() {
   }
 }
 
-$('btn-analisar-ia').addEventListener('click', analisarPorVisao);
-$('btn-parede-ia').addEventListener('click', tracarParedesPorVisao);
+$('btn-analisar-ia').addEventListener('click', () => recursoPro('ia', analisarPorVisao));
+$('btn-parede-ia').addEventListener('click', () => recursoPro('ia', tracarParedesPorVisao));
 $('lnk-ia-chave').addEventListener('click', (e) => { e.preventDefault(); abrirConfigIA(); });
+
+// Planos / assinatura (upsell) — inerte enquanto a monetização não está ligada
+$('lnk-planos').addEventListener('click', (e) => { e.preventDefault(); abrirUpsell(); });
+$('dlg-upsell-fechar').addEventListener('click', () => $('dlg-upsell').close());
+$('dlg-upsell-assinar').addEventListener('click', () => {
+  // Fase 1: aqui vai a chamada ao /api/checkout (Stripe). Por ora, aviso.
+  alert('A assinatura ainda está sendo preparada. Em breve dá para assinar o Pro por aqui.');
+});
+atualizarSeloPlano();
 
 $('btn-inst-xlsx').addEventListener('click', exportarXLSX);
 $('btn-inst-orcamento').addEventListener('click', () => {
@@ -1702,7 +1712,7 @@ $('btn-nuvem-testar').addEventListener('click', async () => {
   nuvemStatus((r.ok ? '✓ ' : '') + r.msg, r.ok);
 });
 
-$('btn-nuvem-enviar').addEventListener('click', async () => {
+$('btn-nuvem-enviar').addEventListener('click', () => recursoPro('nuvem', async () => {
   if (!salvarConfigNuvem()) return;
   nuvemStatus('Enviando projeto (com as plantas)…');
   try {
@@ -1722,7 +1732,7 @@ $('btn-nuvem-enviar').addEventListener('click', async () => {
     }
     nuvemStatus('Falha ao enviar: ' + e.message, false);
   }
-});
+}));
 
 $('btn-nuvem-baixar').addEventListener('click', async () => {
   if (!salvarConfigNuvem()) return;

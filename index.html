@@ -185,7 +185,11 @@
 
       <section class="passo">
         <p class="dica">Atalhos: <strong>1&ndash;4</strong> ferramentas &middot; <strong>C</strong> calibrar &middot; <strong>A</strong> ambiente &middot; <strong>T</strong> planta/tabela &middot; <strong>N</strong> nomes &middot; <strong>Del</strong> excluir ambiente selecionado &middot; <strong>+/&minus;</strong> zoom &middot; <strong>0</strong> ajustar &middot; <strong>Ctrl+Z</strong> desfazer &middot; <strong>Esc</strong> cancelar &middot; arraste para navegar.</p>
-        <p class="dica" id="versao-app">Vers&atilde;o 4.5 &middot; 22/07/2026</p>
+        <p class="rodape-plano">
+          <span id="selo-plano" class="selo-plano" hidden></span>
+          <a href="#" id="lnk-planos">Ver planos</a>
+        </p>
+        <p class="dica" id="versao-app">Vers&atilde;o 4.6 &middot; 22/07/2026</p>
       </section>
     </aside>
   </main>
@@ -356,6 +360,38 @@
       <button id="dlg-ia-remover" class="btn-ghost">Remover chave</button>
       <button id="dlg-ia-cancelar" class="btn-ghost">Cancelar</button>
       <button id="dlg-ia-ok" class="btn-laranja">Salvar</button>
+    </div>
+  </dialog>
+
+  <!-- Diálogo: planos / assinatura (upsell) -->
+  <dialog id="dlg-upsell">
+    <h3>&#11088; Plano Pro</h3>
+    <p class="dica" id="dlg-upsell-recurso">Esse recurso faz parte do plano Pro.</p>
+    <div class="planos-grade">
+      <div class="plano-card">
+        <h4>Gr&aacute;tis</h4>
+        <p class="plano-preco">R$0</p>
+        <ul>
+          <li>1 obra</li>
+          <li>Medi&ccedil;&atilde;o manual e leitura de texto</li>
+          <li>Sem IA e sem nuvem</li>
+        </ul>
+      </div>
+      <div class="plano-card plano-destaque">
+        <h4>Pro</h4>
+        <p class="plano-preco">R$49<span>/m&ecirc;s</span></p>
+        <ul>
+          <li>Obras ilimitadas</li>
+          <li><strong>An&aacute;lise por IA</strong> inclu&iacute;da</li>
+          <li>Nuvem e backup</li>
+          <li>Relat&oacute;rios e XLSX sem marca</li>
+        </ul>
+      </div>
+    </div>
+    <p class="dica">A cobran&ccedil;a ainda est&aacute; sendo preparada &mdash; em breve voc&ecirc; poder&aacute; assinar aqui.</p>
+    <div class="dlg-botoes">
+      <button id="dlg-upsell-fechar" class="btn-ghost">Fechar</button>
+      <button id="dlg-upsell-assinar" class="btn-laranja">Assinar Pro</button>
     </div>
   </dialog>
 

@@ -462,3 +462,23 @@ dialog h3 { margin: 0 0 6px; font-size: 1rem; font-weight: 700; letter-spacing: 
 .login-botoes .btn-laranja, .login-botoes .btn-ghost { flex: 1; height: 38px; }
 #login-conexao { margin-top: 14px; }
 #login-conexao summary { color: var(--texto-2); }
+
+/* Planos / assinatura (upsell) */
+.rodape-plano { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.rodape-plano a { color: var(--laranja-2); text-decoration: none; font-size: .78rem; }
+.rodape-plano a:hover { text-decoration: underline; }
+.selo-plano {
+  font-size: .72rem; padding: 2px 8px; border-radius: 100px;
+  background: var(--fundo-3); color: var(--texto-2); border: 1px solid var(--borda);
+}
+.selo-plano.selo-pro { background: var(--laranja-tinta); color: var(--laranja-2); border-color: var(--laranja); }
+.planos-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+.plano-card {
+  background: var(--fundo-3); border: 1px solid var(--borda); border-radius: 12px; padding: 14px;
+}
+.plano-card.plano-destaque { border-color: var(--laranja); background: var(--laranja-tinta); }
+.plano-card h4 { margin: 0 0 4px; font-size: .95rem; }
+.plano-preco { font-size: 1.4rem; font-weight: 700; margin: 0 0 8px; }
+.plano-preco span { font-size: .8rem; font-weight: 400; color: var(--texto-2); }
+.plano-card ul { margin: 0; padding-left: 16px; font-size: .8rem; color: var(--texto-2); line-height: 1.7; }
+.plano-card.plano-destaque ul { color: var(--texto); }

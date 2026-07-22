@@ -70,6 +70,7 @@ coordenação de obra completa. Interface 100% em pt-BR.
 | `linhas.js` | geometria vetorial real do PDF (reconstruída da lista de operadores do pdf.js): destaque das linhas do CAD + **snap** das ferramentas de medição nos cantos/linhas exatos (`extrairSegmentos`/`snapPonto`, índice espacial de cantos, cache por prancha). Só PDF vetorial |
 | `ia.js` | Anthropic API direto do navegador (modelo escolhido pelo usuário via `MODELOS_IA`/`lerModeloIA`, default `claude-haiku-4-5` = mais barato; saída JSON Schema, header `anthropic-dangerous-direct-browser-access`): ambientes por visão e contagem de símbolos por disciplina. Chave+modelo em `localStorage['levantamento:ia']` = `{chave, modelo}` |
 | `calc.js` | `num`/`fmt` BR, distâncias, shoelace, escala (72/0,0254 pt por metro), `calcAmbiente` (paredes e desconto de vãos) |
+| `conta.js` | camada de planos/assinatura (entitlement). `MONETIZACAO_ATIVA` (hoje `false` = todos têm acesso total, nada bloqueia); `ehPro()`/`recursoPro(recurso, fn)` gateiam recursos pagos (IA, nuvem…) abrindo o modal `#dlg-upsell`. Quando o pagamento existir, `carregarPlano()` lê o plano no Supabase e vira a flag. Override local p/ teste: `localStorage['levantamento:plano']` |
 | `tabela.js` | vista Tabela + CSV |
 | `orcamento.js` | vista Orçamento, `FONTES` de quantidade (inclui `inst:*` e revestimentos molhado/seco), ABC, BDI, CSV de preços |
 | `instalacoes.js` | classificação de ambientes, regras paramétricas, totais, vista Instalações, envio ao orçamento |
