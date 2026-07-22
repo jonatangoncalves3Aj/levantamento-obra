@@ -93,6 +93,19 @@ export async function analisarPlanta(page) {
   return ambientes;
 }
 
+// Diferencia "planta escaneada (sem texto)" de "tem texto, mas nenhum
+// ambiente com área" (ex.: planta de instalações elétrica/hidráulica, que
+// mostra circuitos e símbolos, não cômodos rotulados com m²). Serve para o
+// app dar a orientação certa quando "Analisar planta" não acha ambientes.
+export async function inspecionarTexto(page) {
+  const conteudo = await page.getTextContent();
+  const texto = conteudo.items.map(it => it.str).join(' ');
+  const chars = texto.replace(/\s/g, '').length;
+  const T = texto.toUpperCase();
+  const ehInstalacao = /LEGENDA|PROJETO\s+EL[ÉE]TRICO|PROJETO\s+HIDR|DIAGRAMA\s+UNIFILAR|TOMADA|INTERRUPTOR|PONTO\s+DE\s+LUZ|LUMIN[ÁA]RIA|[ÁA]GUA\s+FRIA|ESGOTO|CIRCUITO|QUADRO\s+DE\s+DISTRIBUI/.test(T);
+  return { chars, temTexto: chars > 40, ehInstalacao };
+}
+
 // Procura "1:50" etc. no texto da prancha (prioriza tokens perto de "ESC")
 export async function detectarEscalaCarimbo(page) {
   const conteudo = await page.getTextContent();

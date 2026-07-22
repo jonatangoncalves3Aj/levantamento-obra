@@ -17,7 +17,7 @@ import {
   renderizar, ajustar, pontoDoEvento, desenharOverlay,
   obterPagina, esquecerPagina, contarPaginas,
 } from './viewer.js';
-import { analisarPlanta, detectarEscalaCarimbo } from './deteccao.js';
+import { analisarPlanta, detectarEscalaCarimbo, inspecionarTexto } from './deteccao.js';
 import {
   analisarComIA, analisarSimbolosIA, disciplinaTemSimbolos,
   iaConfigurada, lerChaveIA, salvarChaveIA,
@@ -300,10 +300,28 @@ $('btn-analisar').addEventListener('click', async () => {
     const { page } = await obterPagina(p);
     const achados = await analisarPlanta(page);
     if (!achados.length) {
-      res.innerHTML = 'Nenhum ambiente encontrado no texto do PDF — a planta deve ser escaneada (imagem). ';
+      const info = await inspecionarTexto(page);
+      const ehInst = info.ehInstalacao || disciplinaTemSimbolos(p.disciplina);
+      let msg;
+      if (!info.temTexto) {
+        // Sem texto de verdade → planta escaneada / imagem.
+        msg = 'Nenhum texto encontrado no PDF — a planta deve ser escaneada (imagem). ' +
+          'Para lê-la é preciso a IA de visão (com chave configurada). ';
+      } else if (ehInst) {
+        // Tem texto, é planta de instalações: o caminho é contar símbolos.
+        msg = 'Esta é uma planta de <strong>instalações</strong> (elétrica/hidráulica): ' +
+          'ela mostra circuitos e símbolos, não ambientes com área. ' +
+          'Defina a disciplina da prancha (Elétrica/Hidráulica) e use a IA para <strong>contar os símbolos</strong> da legenda: ';
+      } else {
+        // Tem texto, mas nenhum ambiente com área rotulada.
+        msg = 'Li o texto da planta, mas não há ambiente com área anotada ' +
+          '(ex.: "SALA 12,00 m²"). Se for arquitetônica, confira se as áreas estão como ' +
+          'texto na planta — ou use a IA de visão: ';
+      }
+      res.innerHTML = msg;
       const btn = document.createElement('button');
       btn.className = 'btn-mini';
-      btn.textContent = '🤖 Analisar com IA (visão)';
+      btn.textContent = ehInst ? '🤖 Contar símbolos com IA' : '🤖 Analisar com IA (visão)';
       btn.addEventListener('click', analisarPorVisao);
       res.appendChild(btn);
       return;
