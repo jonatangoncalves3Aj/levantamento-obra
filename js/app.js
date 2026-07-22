@@ -380,12 +380,15 @@ async function analisarPorVisao() {
   if (disciplinaTemSimbolos(p.disciplina)) return analisarSimbolosPorVisao(p);
   const res = $('resultado-analise');
   res.hidden = false;
-  res.textContent = `🤖 Analisando a planta com ${nomeModeloIA()} — pode levar até 1 minuto…`;
+  res.textContent = `🤖 Analisando a planta com ${nomeModeloIA()}` +
+    (p.regiaoIA ? ' (só na região marcada)' : '') + ' — pode levar até 1 minuto…';
   try {
     const { page, largura, altura } = await obterPagina(p);
-    const achados = await analisarComIA(page, largura, altura);
+    const achados = await analisarComIA(page, largura, altura, p.regiaoIA || null);
     if (!achados.length) {
-      res.textContent = 'A IA não identificou ambientes nesta prancha.';
+      res.textContent = p.regiaoIA
+        ? 'A IA não identificou ambientes dentro da região marcada.'
+        : 'A IA não identificou ambientes nesta prancha.';
       return;
     }
     const { novos, total } = incorporarAchados(p, achados, 'ia');

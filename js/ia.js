@@ -142,14 +142,38 @@ async function chamarIA(esquema, sistema, pedido, imagens) {
   return JSON.parse(texto);
 }
 
+// Prepara a entrada de imagem conforme haja região marcada ou não:
+// sem região → uma imagem (folha inteira), frações relativas à folha;
+// com região → folha (contexto) + recorte ampliado, frações relativas ao
+// RECORTE. `mapa(v)` converte {x,y} em frações para coordenadas base.
+async function entradaComRegiao(page, regiao, larguraBase, alturaBase, pedidoSolto, pedidoRecorte) {
+  if (!regiao) {
+    const mapa = v => ({ x: v.x * larguraBase, y: v.y * alturaBase });
+    return { imagens: await paginaParaPNG(page), pedido: pedidoSolto, mapa };
+  }
+  const rx1 = Math.min(regiao.x1, regiao.x2), ry1 = Math.min(regiao.y1, regiao.y2);
+  const rw = Math.abs(regiao.x2 - regiao.x1), rh = Math.abs(regiao.y2 - regiao.y1);
+  const mapa = v => ({ x: rx1 + v.x * rw, y: ry1 + v.y * rh });
+  return {
+    imagens: [await paginaParaPNG(page, 1600), await regiaoParaPNG(page, regiao)],
+    pedido: pedidoRecorte,
+    mapa,
+  };
+}
+
 // Retorna ambientes [{nome, area, pd, x, y}] com x/y em coordenadas base do PDF
-export async function analisarComIA(page, larguraBase, alturaBase) {
-  const png = await paginaParaPNG(page);
+export async function analisarComIA(page, larguraBase, alturaBase, regiao = null) {
+  const { imagens, pedido, mapa } = await entradaComRegiao(
+    page, regiao, larguraBase, alturaBase,
+    'Liste os ambientes desta planta baixa.',
+    'A PRIMEIRA imagem é a prancha inteira (contexto). A SEGUNDA é o recorte a analisar. ' +
+    'Liste SOMENTE os ambientes visíveis na segunda imagem, com coordenadas em frações 0–1 dela.',
+  );
   const { ambientes } = await chamarIA(
     ESQUEMA,
     'Você analisa plantas baixas de arquitetura brasileiras. Identifique cada ambiente (cômodo) visível na planta. Para cada um, extraia o nome como escrito, a área em m² e o pé-direito (PD) se estiverem anotados, e a posição do centro do ambiente como frações da imagem. Ignore textos de carimbo, cotas e notas — liste apenas ambientes.',
-    'Liste os ambientes desta planta baixa.',
-    png,
+    pedido,
+    imagens,
   );
   return ambientes
     .filter(a => a.nome && a.x >= 0 && a.x <= 1 && a.y >= 0 && a.y <= 1)
@@ -157,8 +181,7 @@ export async function analisarComIA(page, larguraBase, alturaBase) {
       nome: a.nome.toUpperCase(),
       area: a.area ?? null,
       pd: a.pd ?? null,
-      x: a.x * larguraBase,
-      y: a.y * alturaBase,
+      ...mapa(a),
     }));
 }
 
@@ -200,7 +223,6 @@ export async function tracarParedesIA(page, larguraBase, alturaBase, regiao = nu
     additionalProperties: false,
   };
 
-  let imagens, pedido;
   const sistema =
     'Você analisa plantas baixas de arquitetura brasileiras e traça o EIXO de cada parede.\n' +
     'Trace as paredes como polilinhas seguindo o meio de cada parede (linha de centro). ' +
@@ -208,30 +230,21 @@ export async function tracarParedesIA(page, larguraBase, alturaBase, regiao = nu
     'Priorize as paredes principais; não trace móveis, cotas, textos nem esquadrias. ' +
     'Dê os vértices em ordem, como frações 0–1 da imagem.';
 
-  if (regiao) {
-    const pngFolha = await paginaParaPNG(page, 1600);
-    const pngRegiao = await regiaoParaPNG(page, regiao);
-    imagens = [pngFolha, pngRegiao];
-    pedido = 'A PRIMEIRA imagem é a prancha inteira (contexto). A SEGUNDA é o recorte a traçar. ' +
-      'Trace as paredes SOMENTE da segunda imagem, com coordenadas em frações 0–1 dela.';
-  } else {
-    imagens = await paginaParaPNG(page);
-    pedido = 'Trace o eixo de cada parede desta planta baixa.';
-  }
+  const { imagens, pedido, mapa } = await entradaComRegiao(
+    page, regiao, larguraBase, alturaBase,
+    'Trace o eixo de cada parede desta planta baixa.',
+    'A PRIMEIRA imagem é a prancha inteira (contexto). A SEGUNDA é o recorte a traçar. ' +
+    'Trace as paredes SOMENTE da segunda imagem, com coordenadas em frações 0–1 dela.',
+  );
 
   const dados = await chamarIA(esquema, sistema, pedido, imagens);
-
-  const rx1 = regiao ? Math.min(regiao.x1, regiao.x2) : 0;
-  const ry1 = regiao ? Math.min(regiao.y1, regiao.y2) : 0;
-  const rw = regiao ? Math.abs(regiao.x2 - regiao.x1) : larguraBase;
-  const rh = regiao ? Math.abs(regiao.y2 - regiao.y1) : alturaBase;
 
   return (dados.paredes || [])
     .map(p => ({
       classe: p.classe === 'externa' ? 'externa' : 'interna',
       pontos: (p.pontos || [])
         .filter(v => v.x >= 0 && v.x <= 1 && v.y >= 0 && v.y <= 1)
-        .map(v => ({ x: rx1 + v.x * rw, y: ry1 + v.y * rh })),
+        .map(mapa),
     }))
     .filter(p => p.pontos.length >= 2);
 }
@@ -289,46 +302,29 @@ export async function analisarSimbolosIA(page, larguraBase, alturaBase, discipli
     additionalProperties: false,
   };
 
-  let imagens, pedido, sistema;
-  sistema =
+  const sistema =
     `Você analisa plantas de instalações ${contexto} brasileiras.\n` +
     '1) Primeiro localize a LEGENDA (quadro de símbolos/convenções) da prancha e liste cada item com o nome EXATAMENTE como escrito nela.\n' +
     '2) Depois localize CADA ocorrência de cada símbolo na área desenhada da planta — um item por ocorrência, com o centro em frações 0–1 da imagem, usando o MESMO nome da legenda.\n' +
     'Se a prancha não tiver legenda, retorne legenda vazia e use nomes curtos e descritivos (ex.: "Tomada baixa", "Ponto de luz no teto").\n' +
     'Não conte os símbolos desenhados dentro da própria legenda; ignore carimbo, notas e cotas.';
 
-  if (regiao) {
-    // Duas imagens: folha inteira (para a legenda) + recorte só da região a contar.
-    const pngFolha = await paginaParaPNG(page, 1600);
-    const pngRegiao = await regiaoParaPNG(page, regiao);
-    imagens = [pngFolha, pngRegiao];
-    pedido =
-      'A PRIMEIRA imagem é a prancha inteira — use-a APENAS para ler a legenda.\n' +
-      'A SEGUNDA imagem é um recorte ampliado da área que você deve contar (a planta baixa). ' +
-      'Conte os símbolos SOMENTE nesta segunda imagem, ignorando qualquer coisa fora dela ' +
-      '(diagrama unifilar, detalhes, legenda). As coordenadas x/y devem ser frações 0–1 ' +
-      'em relação à SEGUNDA imagem (o recorte).';
-  } else {
-    imagens = await paginaParaPNG(page);
-    pedido = 'Leia a legenda e conte todos os símbolos de instalação desta prancha.';
-  }
+  const { imagens, pedido, mapa } = await entradaComRegiao(
+    page, regiao, larguraBase, alturaBase,
+    'Leia a legenda e conte todos os símbolos de instalação desta prancha.',
+    'A PRIMEIRA imagem é a prancha inteira — use-a APENAS para ler a legenda.\n' +
+    'A SEGUNDA imagem é um recorte ampliado da área que você deve contar (a planta baixa). ' +
+    'Conte os símbolos SOMENTE nesta segunda imagem, ignorando qualquer coisa fora dela ' +
+    '(diagrama unifilar, detalhes, legenda). As coordenadas x/y devem ser frações 0–1 ' +
+    'em relação à SEGUNDA imagem (o recorte).',
+  );
 
   const dados = await chamarIA(esquema, sistema, pedido, imagens);
-
-  // Em modo região, as frações são relativas ao recorte → mapeia p/ coords base.
-  const rx1 = regiao ? Math.min(regiao.x1, regiao.x2) : 0;
-  const ry1 = regiao ? Math.min(regiao.y1, regiao.y2) : 0;
-  const rw = regiao ? Math.abs(regiao.x2 - regiao.x1) : larguraBase;
-  const rh = regiao ? Math.abs(regiao.y2 - regiao.y1) : alturaBase;
 
   return {
     legenda: (dados.legenda || []).map(l => l.item?.trim()).filter(Boolean),
     itens: (dados.itens || [])
       .filter(i => i.item && i.x >= 0 && i.x <= 1 && i.y >= 0 && i.y <= 1)
-      .map(i => ({
-        rotulo: i.item.trim(),
-        x: rx1 + i.x * rw,
-        y: ry1 + i.y * rh,
-      })),
+      .map(i => ({ rotulo: i.item.trim(), ...mapa(i) })),
   };
 }

@@ -91,15 +91,18 @@ efetivo vem de `pavimentoDoAmbiente()`/`ambientesPorPavimento()` no store —
 Medições (`prancha.medicoes[]`) têm tipos `linear`, `contagem` e `parede`
 (`{tipo:'parede', classe:'interna'|'externa', pd, pontos[]}` — área =
 comprimento×PD, somada por `totaisParedes()` no store; fontes de orçamento
-`paredeInterna`/`paredeExterna`). Paredes são editáveis na planta: alças
-`[data-vertice="id:i"]` nos vértices (renderizadas sem ferramenta ativa;
-arraste com snap quando o destaque de linhas está ligado) e botão ⇄ na
-lista de Medições alterna interna/externa. `projeto.peDireitoPadrao` é o PD default.
-`prancha.regiaoIA` (opcional, `{x1,y1,x2,y2}` em coords base) restringe a
-contagem de símbolos por IA a um retângulo — folha com planta baixa +
-unifilar + detalhes junto (ferramenta "Região p/ contar"); a IA recebe a
-folha inteira (para a legenda) + o recorte da região (para contar) e o
-`ia.js` mapeia as frações do recorte de volta para coords base.
+`paredeInterna`/`paredeExterna`). Paredes **e** medições lineares são
+editáveis na planta: alças `[data-vertice="id:i"]` nos vértices (renderizadas
+sem ferramenta ativa; arraste com snap quando o destaque de linhas está
+ligado). Paredes têm ainda o botão ⇄ na lista de Medições p/ alternar
+interna/externa. `projeto.peDireitoPadrao` é o PD default.
+`prancha.regiaoIA` (opcional, `{x1,y1,x2,y2}` em coords base) restringe
+**toda** análise por IA a um retângulo — folha com planta baixa + unifilar +
+detalhes junto (ferramenta "Região para a IA"). Vale para ambientes
+(`analisarComIA`), símbolos (`analisarSimbolosIA`) e paredes
+(`tracarParedesIA`); o helper `entradaComRegiao()` no `ia.js` manda a folha
+inteira (contexto/legenda) + o recorte da região e devolve `mapa()` que
+converte as frações do recorte de volta para coords base.
 Campos novos: adicione migração em `garantirCampos()` no store.
 
 ## Integrações
