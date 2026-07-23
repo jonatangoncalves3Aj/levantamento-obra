@@ -32,6 +32,24 @@ import { fmt, num, dist, comprimentoPolilinha, perimetroPoligono, areaPoligono, 
 const $ = (id) => document.getElementById(id);
 const overlay = $('overlay');
 
+/* =============== Tema (claro/escuro) =============== */
+const CHAVE_TEMA = 'levantamento:tema';
+function aplicarTema(tema) {
+  if (tema === 'claro') document.documentElement.dataset.tema = 'claro';
+  else delete document.documentElement.dataset.tema;   // escuro = padrão
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', tema === 'claro' ? '#eef1f6' : '#161e29');
+  const btn = $('btn-tema');
+  if (btn) btn.innerHTML = tema === 'claro' ? '&#9681; Escuro' : '&#9680; Claro';
+}
+// Aplica o quanto antes, para reduzir o "flash" na abertura
+aplicarTema(localStorage.getItem(CHAVE_TEMA) || 'escuro');
+$('btn-tema')?.addEventListener('click', () => {
+  const novo = document.documentElement.dataset.tema === 'claro' ? 'escuro' : 'claro';
+  localStorage.setItem(CHAVE_TEMA, novo);
+  aplicarTema(novo);
+});
+
 /* =============== Inicialização =============== */
 
 state.projeto = carregarProjeto() || novoProjeto();

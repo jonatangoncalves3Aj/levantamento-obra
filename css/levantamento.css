@@ -34,6 +34,35 @@
   --foco: 0 0 0 2px rgba(221, 162, 58, .45);
 }
 
+/* Tema claro (opcional): o app começa no escuro; o botão de tema alterna
+   e salva a preferência. Só redefine as variáveis — cascateia por tudo. */
+:root[data-tema="claro"] {
+  --fundo: #eef1f6;
+  --fundo-2: #ffffff;
+  --fundo-3: #f2f5f9;
+  --fundo-4: #e4e9f1;
+  --borda: #d6dce6;
+  --borda-2: #c0c8d6;
+  --texto: #1b2431;
+  --texto-2: #5a6675;
+  --laranja: #b5791a;
+  --laranja-2: #9c6714;
+  --laranja-tinta: rgba(181, 121, 26, .12);
+  --azul: #2563eb;
+  --azul-tinta: rgba(37, 99, 235, .10);
+  --alerta: #dc2626;
+  --ok: #16a34a;
+  --sombra-1: 0 1px 2px rgba(30, 40, 60, .12);
+  --sombra-2: 0 10px 30px rgba(30, 40, 60, .18);
+  --foco: 0 0 0 2px rgba(181, 121, 26, .4);
+}
+:root[data-tema="claro"] .viewport {
+  background: #e5e9f0;
+  background-image: radial-gradient(rgba(0, 0, 0, .05) 1px, transparent 1px);
+}
+:root[data-tema="claro"] #canvas-pdf { box-shadow: 0 8px 30px rgba(30, 40, 60, .22); }
+:root[data-tema="claro"] table.quant tbody tr:hover td { background: rgba(0, 0, 0, .03); }
+
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { height: 100%; }
