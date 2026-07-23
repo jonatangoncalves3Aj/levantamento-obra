@@ -5,6 +5,10 @@ quantitativos de obra a partir de plantas em PDF, inspirado num app visto em
 reel do Instagram e expandido para coordenação de obra completa. Interface
 100% em pt-BR. O nome só mudou na marca (título, manifest, ícone); o
 repositório e a URL do GitHub Pages continuam `levantamento-obra`.
+Identidade: acento **dourado** (`--laranja*` guardam o dourado da marca) e
+fundo **azul-marinho**; slogan "Inteligência que constrói precisão". Ícone é
+PNG (`icons/icon-192/512`, sem mais `icon.svg`); fontes da marca em
+`docs/marca/`.
 
 - **App no ar:** https://jonatangoncalves3aj.github.io/levantamento-obra/
 - **Repositório:** jonatangoncalves3Aj/levantamento-obra (branch `main`)

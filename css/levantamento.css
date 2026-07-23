@@ -9,17 +9,20 @@
 }
 
 :root {
-  --fundo: #101014;
-  --fundo-2: #17171c;
-  --fundo-3: #1f1f26;
-  --fundo-4: #26262e;
-  --borda: #2a2a33;
-  --borda-2: #3a3a45;
-  --texto: #ececf1;
-  --texto-2: #9c9ca8;
-  --laranja: #f97316;
-  --laranja-2: #fb923c;
-  --laranja-tinta: rgba(249, 115, 22, .12);
+  /* Identidade Prumo IA: fundo azul-marinho (combina com o ícone) e
+     acento dourado (a régua do logotipo). --laranja* guardam o dourado
+     por compatibilidade — são o "acento da marca". */
+  --fundo: #0e131c;
+  --fundo-2: #151b26;
+  --fundo-3: #1d2431;
+  --fundo-4: #28303f;
+  --borda: #2b3342;
+  --borda-2: #3b4457;
+  --texto: #eceef3;
+  --texto-2: #97a0b2;
+  --laranja: #dda23a;
+  --laranja-2: #eec45f;
+  --laranja-tinta: rgba(221, 162, 58, .14);
   --azul: #3b82f6;
   --azul-tinta: rgba(59, 130, 246, .10);
   --alerta: #f87171;
@@ -28,7 +31,7 @@
   --raio-g: 12px;
   --sombra-1: 0 1px 2px rgba(0, 0, 0, .35);
   --sombra-2: 0 8px 28px rgba(0, 0, 0, .45);
-  --foco: 0 0 0 2px rgba(249, 115, 22, .45);
+  --foco: 0 0 0 2px rgba(221, 162, 58, .45);
 }
 
 * { box-sizing: border-box; }
@@ -453,10 +456,11 @@ dialog h3 { margin: 0 0 6px; font-size: 1rem; font-weight: 700; letter-spacing: 
   border: 1px solid var(--borda-2); border-radius: 16px; padding: 26px 24px;
   box-shadow: var(--sombra-2);
 }
-.login-marca { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
-.login-marca img { width: 40px; height: 40px; border-radius: 9px; }
-.login-marca h1 { font-size: 1.15rem; margin: 0; font-weight: 800; letter-spacing: -.02em; }
+.login-marca { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 6px; }
+.login-marca img { width: 44px; height: 44px; border-radius: 10px; }
+.login-marca h1 { font-size: 1.2rem; margin: 0; font-weight: 800; letter-spacing: -.02em; }
 .login-marca span { color: var(--laranja-2); }
+.marca-slogan { width: 100%; margin: 2px 0 0; font-size: .78rem; color: var(--laranja-2); letter-spacing: .03em; text-transform: uppercase; }
 .login-caixa .campo-label { margin-top: 6px; }
 .login-botoes { display: flex; gap: 10px; margin-top: 16px; }
 .login-botoes .btn-laranja, .login-botoes .btn-ghost { flex: 1; height: 38px; }
