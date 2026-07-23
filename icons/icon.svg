@@ -4,7 +4,7 @@
       <stop offset="0" stop-color="#1c2434"/>
       <stop offset="1" stop-color="#10141d"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0.52" cy="0.5" r="0.55">
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.55">
       <stop offset="0" stop-color="#dda23a" stop-opacity="0.20"/>
       <stop offset="1" stop-color="#dda23a" stop-opacity="0"/>
     </radialGradient>
@@ -16,7 +16,7 @@
   </defs>
 
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <circle cx="270" cy="256" r="210" fill="url(#glow)"/>
+  <circle cx="256" cy="256" r="210" fill="url(#glow)"/>
 
   <!-- Malha de planta (discreta) -->
   <g stroke="#ffffff" stroke-opacity="0.05" stroke-width="2">
@@ -25,18 +25,19 @@
     <line x1="150" y1="0" x2="150" y2="512"/><line x1="362" y1="0" x2="362" y2="512"/>
   </g>
 
-  <!-- Régua dourada (motivo da marca) -->
-  <rect x="120" y="150" width="46" height="252" rx="12" fill="url(#gold)"/>
+  <!-- Régua dourada -->
+  <rect x="118" y="150" width="46" height="252" rx="12" fill="url(#gold)"/>
   <g fill="#12141d" opacity="0.85">
-    <rect x="146" y="186" width="20" height="7" rx="2"/>
-    <rect x="153" y="222" width="13" height="7" rx="2"/>
-    <rect x="146" y="258" width="20" height="7" rx="2"/>
-    <rect x="153" y="294" width="13" height="7" rx="2"/>
-    <rect x="146" y="330" width="20" height="7" rx="2"/>
-    <rect x="153" y="366" width="13" height="7" rx="2"/>
+    <rect x="144" y="186" width="20" height="7" rx="2"/>
+    <rect x="151" y="222" width="13" height="7" rx="2"/>
+    <rect x="144" y="258" width="20" height="7" rx="2"/>
+    <rect x="151" y="294" width="13" height="7" rx="2"/>
+    <rect x="144" y="330" width="20" height="7" rx="2"/>
+    <rect x="151" y="366" width="13" height="7" rx="2"/>
   </g>
 
-  <!-- Letra Q: anel branco + cauda dourada -->
-  <circle cx="322" cy="256" r="86" fill="none" stroke="#f4f6fa" stroke-width="46"/>
-  <line x1="352" y1="300" x2="404" y2="360" stroke="url(#gold)" stroke-width="34" stroke-linecap="round"/>
+  <!-- Esquadro (set square) branco: triângulo retângulo em contorno -->
+  <path fill="#f4f6fa" fill-rule="evenodd"
+        d="M206 366 L400 366 L206 172 Z
+           M240 320 L318 320 L240 242 Z"/>
 </svg>

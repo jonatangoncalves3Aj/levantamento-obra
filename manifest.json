@@ -1,7 +1,7 @@
 {
-  "name": "Quantiza",
-  "short_name": "Quantiza",
-  "description": "Quantiza — levantamento de quantitativos de obra a partir de plantas em PDF, com IA de visão, medição precisa, orçamento e avanço físico",
+  "name": "Levantamento de Obra",
+  "short_name": "Levantamento",
+  "description": "Levantamento de quantitativos de obra a partir de plantas em PDF, com IA de visão, medição precisa, orçamento e avanço físico",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

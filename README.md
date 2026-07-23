@@ -1,6 +1,6 @@
-# Quantiza
+# Levantamento de Obra
 
-**Quantiza** — app web para **levantamento de quantitativos de obra a partir de plantas em PDF**, com IA de visão e medição precisa. 100% no navegador, offline-first (PWA), sem enviar nenhum arquivo para servidor.
+App web para **levantamento de quantitativos de obra a partir de plantas em PDF**, com IA de visão e medição precisa. 100% no navegador, offline-first (PWA), sem enviar nenhum arquivo para servidor. *(Marca ainda a definir.)*
 
 **Acesse:** https://jonatangoncalves3aj.github.io/levantamento-obra/
 

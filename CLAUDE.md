@@ -1,13 +1,13 @@
-# Quantiza — guia do projeto
+# Levantamento de Obra — guia do projeto
 
-**Quantiza** (antes "Prumo IA" / "Levantamento de Obra") — app web (PWA) de
-levantamento de quantitativos de obra a partir de plantas em PDF, inspirado
-num app visto em reel do Instagram e expandido para coordenação de obra
-completa. Interface 100% em pt-BR. O nome só muda na marca (título, manifest,
-ícone); o repositório e a URL do GitHub Pages continuam `levantamento-obra`.
-Identidade: acento **dourado** (`--laranja*` guardam o dourado da marca) e
-fundo **azul-marinho**; marca "Q" (régua dourada + Q) e slogan "Inteligência
-que quantifica sua obra". Ícone em `icons/icon-192/512` (PNG gerados do
+App web (PWA) de levantamento de quantitativos de obra a partir de plantas em
+PDF, inspirado num app visto em reel do Instagram e expandido para coordenação
+de obra completa. Interface 100% em pt-BR. **Marca ainda a definir** — nomes
+"Prumo IA" e "Quantiza" foram descartados por colisão de registro; por ora o
+app usa o título descritivo "Levantamento de Obra" e um ícone neutro
+(régua + esquadro). Repositório e URL do GitHub Pages: `levantamento-obra`.
+Identidade visual mantida: acento **dourado** (`--laranja*` guardam o dourado)
+e fundo **azul-marinho**; ícone em `icons/icon-192/512` (PNG gerados do
 `icons/icon.svg`); tema claro opcional (`data-tema="claro"`).
 
 - **App no ar:** https://jonatangoncalves3aj.github.io/levantamento-obra/
