@@ -44,19 +44,31 @@ function reconstruir(ol, vp) {
     else if (fn === OPS.transform) ctm = mul(ctm, args);
     else if (fn === OPS.constructPath) {
       const ops = args[0], coords = args[1];
-      let ci = 0, cur = null;
+      let ci = 0, cur = null, inicio = null;
+      // IMPORTANTE: cada operador consome um nº fixo de coordenadas. Se algum
+      // não for tratado (curveTo2/curveTo3/closePath), o índice desalinha e os
+      // pontos seguintes viram lixo — daí linhas diagonais atravessando o
+      // desenho. Por isso tratamos TODOS e só desenhamos os trechos retos.
       for (const op of ops) {
-        if (op === OPS.moveTo) { cur = [coords[ci++], coords[ci++]]; }
-        else if (op === OPS.lineTo) {
-          const nx = coords[ci++], ny = coords[ci++];
+        if (op === OPS.moveTo) {
+          cur = [coords[ci], coords[ci + 1]]; ci += 2; inicio = cur;
+        } else if (op === OPS.lineTo) {
+          const nx = coords[ci], ny = coords[ci + 1]; ci += 2;
           if (cur) push(cur[0], cur[1], nx, ny);
           cur = [nx, ny];
-        } else if (op === OPS.curveTo) { ci += 6; cur = [coords[ci - 2], coords[ci - 1]]; }
-        else if (op === OPS.rectangle) {
-          const x = coords[ci++], y = coords[ci++], w = coords[ci++], h = coords[ci++];
+        } else if (op === OPS.curveTo) {          // c — 6 coords (2 controles + fim)
+          ci += 6; cur = [coords[ci - 2], coords[ci - 1]];
+        } else if (op === OPS.curveTo2 || op === OPS.curveTo3) { // v / y — 4 coords
+          ci += 4; cur = [coords[ci - 2], coords[ci - 1]];
+        } else if (op === OPS.closePath) {        // fecha o subpath (0 coords)
+          if (cur && inicio) push(cur[0], cur[1], inicio[0], inicio[1]);
+          cur = inicio;
+        } else if (op === OPS.rectangle) {        // 4 coords
+          const x = coords[ci], y = coords[ci + 1], w = coords[ci + 2], h = coords[ci + 3];
+          ci += 4;
           push(x, y, x + w, y); push(x + w, y, x + w, y + h);
           push(x + w, y + h, x, y + h); push(x, y + h, x, y);
-          cur = null;
+          cur = null; inicio = null;
         }
       }
     }
